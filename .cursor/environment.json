@@ -13,5 +13,10 @@
       "command": "cd /workspace && DJANGO_DB=sqlite LOG_DIR=tmp DEBUG=true LOG_LEVEL=INFO DJANGO_SETTINGS_MODULE=core.settings.label_studio uv run python label_studio/manage.py runserver 0.0.0.0:8080"
     }
   ],
-  "ports": [8080]
+  "ports": [
+    {
+      "name": "label-studio",
+      "port": 8080
+    }
+  ]
 }

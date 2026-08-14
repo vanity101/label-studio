@@ -4,7 +4,8 @@
 # bundle so the Django dev server can serve the full UI.
 set -euo pipefail
 
-export PATH="$HOME/.local/bin:$HOME/.bun/bin:$PATH"
+# uv and bun are installed system-wide in the Dockerfile (/usr/local/bin).
+export PATH="/usr/local/bin:$PATH"
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$REPO_ROOT"

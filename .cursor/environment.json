@@ -1,11 +1,16 @@
 {
   "name": "Label Studio",
+  "user": "ubuntu",
+  "build": {
+    "dockerfile": "Dockerfile",
+    "context": ".."
+  },
   "install": "bash .cursor/install.sh",
   "start": "bash .cursor/start.sh",
   "terminals": [
     {
       "name": "label-studio-server",
-      "command": "export PATH=\"$HOME/.local/bin:$HOME/.bun/bin:$PATH\"; cd /workspace && DJANGO_DB=sqlite LOG_DIR=tmp DEBUG=true LOG_LEVEL=INFO DJANGO_SETTINGS_MODULE=core.settings.label_studio uv run python label_studio/manage.py runserver 0.0.0.0:8080"
+      "command": "cd /workspace && DJANGO_DB=sqlite LOG_DIR=tmp DEBUG=true LOG_LEVEL=INFO DJANGO_SETTINGS_MODULE=core.settings.label_studio uv run python label_studio/manage.py runserver 0.0.0.0:8080"
     }
   ],
   "ports": [8080]

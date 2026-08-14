@@ -22,4 +22,17 @@ bun install --frozen-lockfile
 echo "==> Building frontend bundle"
 NODE_OPTIONS="--max-old-space-size=4096" bun run build
 
+cd "$REPO_ROOT"
+
+echo "==> Collecting static files"
+# Populates STATIC_ROOT (label_studio/core/static_build), including
+# js/manifest.json which manifest_assets.py reads to resolve hashed asset URLs.
+# Without this the dev server serves a blank page in non-HMR mode.
+DJANGO_DB=sqlite \
+  LOG_DIR=tmp \
+  DEBUG=true \
+  LOG_LEVEL=INFO \
+  DJANGO_SETTINGS_MODULE=core.settings.label_studio \
+  uv run python label_studio/manage.py collectstatic --no-input
+
 echo "==> Install complete"

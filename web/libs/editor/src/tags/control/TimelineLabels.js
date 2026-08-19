@@ -6,6 +6,13 @@ import { guidGenerator } from "../../core/Helpers";
 import SelectedModelMixin from "../../mixins/SelectedModel";
 import ControlBase from "./Base";
 import { HtxLabels, LabelsModel } from "./Labels/Labels";
+import {
+  canCreateSpan,
+  DISCARD_LABEL,
+  lastCreatedTimelineRegion,
+  nextClickSpan,
+  resolveNamedTag,
+} from "./timelineClickToSpan";
 
 /**
  * Use the TimelineLabels tag to classify video frames. This can be a single frame or a span of frames.
@@ -44,6 +51,35 @@ const ModelAttrs = types.model("TimelineLabelsModel", {
   type: "timelinelabels",
 });
 
+const ClickToSpan = types.model("TimelineLabelsClickToSpan").actions((self) => ({
+  /**
+   * Clicking a phase label creates a span immediately.
+   * @returns {boolean} true if the click was handled (skip default toggleSelected)
+   */
+  handleLabelClick(label) {
+    if (!label || label.value === DISCARD_LABEL) return false;
+
+    const video =
+      resolveNamedTag(self.annotation, self.toname) ||
+      (self.annotation?.objects ?? []).find((tag) => tag?.type === "video");
+    if (!video) return false;
+    if (!canCreateSpan(Boolean(video.isDiscarded))) return true;
+
+    const last = lastCreatedTimelineRegion(self.annotation.regionStore?.regions ?? []);
+    const span = nextClickSpan(last?.ranges?.[0]?.end, video.currentFrame ?? video.frame ?? 1);
+
+    self.annotation.unselectAreas?.();
+    self.unselectAll();
+    label.setSelected(true);
+    const region = video.addTimelineRegion({ frame: span.start });
+    if (region) {
+      region.setRange([span.start, span.end], { mode: "new" });
+    }
+    self.unselectAll();
+    return true;
+  },
+}));
+
 const TimelineLabelsModel = types.compose(
   "TimelineLabelsModel",
   ControlBase,
@@ -51,6 +87,7 @@ const TimelineLabelsModel = types.compose(
   ModelAttrs,
   TagAttrs,
   SelectedModelMixin.props({ _child: "LabelModel" }),
+  ClickToSpan,
 );
 
 const HtxTimelineLabels = observer(({ item }) => {

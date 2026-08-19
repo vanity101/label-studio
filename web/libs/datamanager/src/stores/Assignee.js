@@ -2,6 +2,49 @@ import { types } from "mobx-state-tree";
 import { User } from "./Users";
 import { StringOrNumberID } from "./types";
 
+const USER_CHIP_FIELDS = ["annotators", "reviewers", "updated_by", "comment_authors"];
+
+function isNumericUserId(value) {
+  return typeof value === "number" && Number.isFinite(value);
+}
+
+/**
+ * Return the User id that Assignee.preProcessSnapshot will store as a
+ * `types.reference(User)`. Full nested user objects are ignored so we never
+ * insert a stub that collides with an identifier already owned by that object.
+ */
+export function referencedUserIdFromAssigneeSnapshot(sn) {
+  if (isNumericUserId(sn)) return sn;
+  if (!sn || typeof sn !== "object") return null;
+
+  const { user_id, user: nestedUser, annotated, review, reviewed, ...user } = sn;
+  const id = user_id ?? sn.id;
+
+  if (nestedUser && typeof nestedUser === "object") return null;
+  if (isNumericUserId(nestedUser)) return nestedUser;
+
+  const hasUserProperties = Object.keys(user).length > 0;
+
+  if (hasUserProperties) return null;
+  return isNumericUserId(id) ? id : null;
+}
+
+export function collectReferencedUserIds(record) {
+  if (!record || typeof record !== "object") return [];
+  const ids = [];
+
+  for (const field of USER_CHIP_FIELDS) {
+    const items = record[field];
+    if (!Array.isArray(items)) continue;
+    for (const item of items) {
+      const id = referencedUserIdFromAssigneeSnapshot(item);
+      if (id != null) ids.push(id);
+    }
+  }
+
+  return ids;
+}
+
 // Create a union type that can handle both user references and direct user objects
 const UserOrReference = types.union({
   dispatcher: (snapshot) => {

@@ -7,6 +7,7 @@ import { isDefined } from "../utils/utilities";
 import { AllRegionsType } from "../regions";
 import Tree, { TRAVERSE_STOP } from "../core/Tree";
 import { FF_DEV_2755, isFF } from "../utils/feature-flags";
+import { moveId } from "../components/SidePanels/OutlinerPanel/flatReorder";
 
 const hotkeys = Hotkey("RegionStore");
 
@@ -152,6 +153,9 @@ export default types
 
     filter: types.maybeNull(types.array(types.safeReference(AllRegionsType)), null),
 
+    // Display order after the user drags the outliner. Empty = creation / current sort.
+    outlinerOrder: types.optional(types.array(types.string), []),
+
     view: types.optional(
       types.enumeration(["regions", "labels"]),
       window.localStorage.getItem(localStorageKeys.view) ?? "regions",
@@ -264,7 +268,15 @@ export default types
 
         const sorted = sorts[self.sort](self.sortOrder === "desc");
 
-        return sorted;
+        if (!self.outlinerOrder.length) return sorted;
+
+        const index = new Map(self.outlinerOrder.map((id, i) => [id, i]));
+        return [...self.filteredRegions].sort((a, b) => {
+          const fallback = self.outlinerOrder.length;
+          const ai = index.has(a.id) ? index.get(a.id) : fallback + (a.ouid ?? 0);
+          const bi = index.has(b.id) ? index.get(b.id) : fallback + (b.ouid ?? 0);
+          return ai - bi;
+        });
       },
 
       get regionIndexMap() {
@@ -336,7 +348,7 @@ export default types
           const pid = el.item.parentID;
           const parent = pid ? (lookup.get(pid) ?? lookup.get(pid.replace(/#(.+)/i, ""))) : null;
 
-          if (parent) return parent.children.push(el);
+          if (parent && el.item?.type !== "timelineregion") return parent.children.push(el);
 
           tree.push(el);
         });
@@ -607,6 +619,19 @@ export default types
 
       destroy(region);
       self.initHotkeys();
+    },
+
+    applyFlatOutlinerOrder(dragId, dropId, place) {
+      const existing = new Set(self.filteredRegions.map((region) => region.id));
+      const seed = (self.outlinerOrder.length ? [...self.outlinerOrder] : self.sortedRegions.map((region) => region.id)).filter(
+        (id) => existing.has(id),
+      );
+      for (const region of self.sortedRegions) {
+        if (!seed.includes(region.id)) seed.push(region.id);
+      }
+      self.outlinerOrder.replace(moveId(seed, dragId, dropId, place));
+      const drag = self.findRegionID(dragId);
+      drag?.setParentID?.("");
     },
 
     findRegionID(id) {

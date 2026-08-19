@@ -11,6 +11,7 @@ import { FF_VIDEO_FRAME_SEEK_PRECISION, isFF } from "../../../utils/feature-flag
 import { ff } from "@humansignal/core";
 import ObjectBase from "../Base";
 import { isDefined } from "../../../utils/utilities";
+import { DISCARD_FROM_NAME, isDiscardValues, resolveNamedTag } from "../../control/timelineClickToSpan";
 
 const isSyncedBuffering = ff.isActive(ff.FF_SYNCED_BUFFERING);
 
@@ -123,7 +124,21 @@ const Model = types
     },
 
     get timelineControl() {
-      return self.annotation.toNames.get(self.name)?.find((s) => s.type.includes("timeline"));
+      const bound = self.annotation?.toNames?.get?.(self.name) ?? [];
+      const tags = bound.map((item) => (typeof item === "string" ? resolveNamedTag(self.annotation, item) : item));
+      return tags.find((tag) => tag?.type?.includes?.("timeline"));
+    },
+
+    get isDiscarded() {
+      const discard = resolveNamedTag(self.annotation, DISCARD_FROM_NAME);
+      if (discard) {
+        return isDiscardValues(discard.selectedValues?.() ?? []);
+      }
+      const results = self.annotation?.results ?? [];
+      return results.some(
+        (result) =>
+          result?.from_name?.name === DISCARD_FROM_NAME && isDiscardValues(result?.mainValue ?? result?.value?.choices),
+      );
     },
 
     get videoControl() {
@@ -456,6 +471,8 @@ const Model = types
       },
 
       addTimelineRegion(data) {
+        if (self.isDiscarded) return;
+
         const control = self.timelineControl;
 
         if (!control) {
@@ -493,7 +510,7 @@ const Model = types
        */
       startDrawing({ frame, region: id }) {
         // don't create or edit regions in read-only mode
-        if (self.annotation.isReadOnly()) return null;
+        if (self.annotation.isReadOnly() || self.isDiscarded) return null;
 
         if (id) {
           const region = self.annotation.regions.find((r) => r.cleanId === id);

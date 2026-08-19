@@ -310,3 +310,15 @@ describe("AppStore invokeAction reload handling (UTC-1043)", () => {
     expect(store.needsDataFetch).toBe(true);
   });
 });
+
+describe("AppStore.ensureUserStubs", () => {
+  it("inserts empty User shells for missing ids and skips ones already present", () => {
+    const store = AppStore.create({ toolbar: "" });
+
+    store.ensureUserStubs([1, 1, "2", Number.NaN]);
+    store.ensureUserStubs([2, 3]);
+
+    expect(store.users.map((user) => user.id)).toEqual([1, 2, 3]);
+    expect(store.users[0].email).toBe("");
+  });
+});

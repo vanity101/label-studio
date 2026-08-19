@@ -29,6 +29,7 @@ import "./TreeView.prefix.css";
 import type { EventDataNode, Key } from "rc-tree/es/interface";
 import ResizeObserver from "../../../utils/resize-observer";
 import { RegionLabel } from "./RegionLabel";
+import { dropPlace, shouldFlatReorder } from "./flatReorder";
 
 const { localStorage } = window;
 const localStoreName = "collapsed-label-pos";
@@ -341,14 +342,20 @@ const useEventHandlers = () => {
     const dragKey = dragNode.props.eventKey;
     const dropPos = node.props.pos.split("-");
     const regions = node.item.annotation.regionStore;
-
-    dropPosition = dropPosition - Number.parseInt(dropPos[dropPos.length - 1]);
+    const dropIndex = Number.parseInt(dropPos[dropPos.length - 1]);
     const treeDepth = dropPos.length;
 
     const dragReg = regions.findRegionID(dragKey);
     const dropReg = regions.findRegionID(dropKey);
 
     regions.unhighlightAll();
+
+    if (shouldFlatReorder(dragReg, dropReg)) {
+      regions.applyFlatOutlinerOrder(dragKey, dropKey, dropPlace(dropToGap, dropPosition, dropIndex));
+      return;
+    }
+
+    dropPosition = dropPosition - dropIndex;
 
     if (treeDepth === 2 && dropToGap && dropPosition === -1) {
       dragReg.setParentID("");

@@ -1,0 +1,61 @@
+<View>
+  <Header value="机器人视频时间轴标注（2-3 视角）"/>
+  <Header value="主视角挂时间轴。侧视角字段名以数据包为准，不一致就改 Video 的 name/value 后保存。"/>
+
+  <TimelineLabels name="videoLabels" toName="observation.images.image_top">
+    <Label value="Static" background="#1d81cd"/>
+    <Label value="grasp" background="#c813ec"/>
+    <Label value="Place" background="#54d651"/>
+    <Label value="End" background="#0d14d3"/>
+  </TimelineLabels>
+
+  <View className="video-wrapper">
+    <View className="video-main">
+      <Video style="height: 400px" name="observation.images.image_top" value="$observation.images.image_top" frameRate="30.0" timelineHeight="120"/>
+    </View>
+    <View className="video-other">
+      <Video name="observation.images.image_left" value="$observation.images.image_left" frameRate="30.0" timelineHeight="120"/>
+      <Video name="observation.images.image_right" value="$observation.images.image_right" frameRate="30.0" timelineHeight="120"/>
+    </View>
+  </View>
+
+  <Header value="整段信息（不是第二条时间轴）"/>
+  <Choices name="granularity" toName="observation.images.image_top" choice="single" showInline="true">
+    <Choice value="简单"/>
+    <Choice value="中等"/>
+    <Choice value="复杂"/>
+  </Choices>
+  <TextArea name="action_sequence" toName="observation.images.image_top" editable="true" rows="2" placeholder="例如：抓住水瓶-倒水-放在桌上"/>
+  <Choices name="abnormal" toName="observation.images.image_top" choice="single" showInline="true">
+    <Choice value="废弃"/>
+    <Choice value="异常"/>
+    <Choice value="abnormal"/>
+  </Choices>
+
+  <Style>
+    .video-wrapper {
+      display: flex;
+    }
+    .video-main {
+      width: 60%;
+      height: 680px;
+      overflow: scroll;
+    }
+    .video-other {
+      width: 40%;
+      height: 680px;
+      overflow: scroll;
+      display: flex;
+      flex-direction: column;
+    }
+    .video-main .lsf-video__main {
+      height: 400px !important;
+    }
+    .video-other .lsf-video__main {
+      height: 340px !important;
+    }
+    .video-other .lsf-timeline {
+      display: none;
+    }
+  </Style>
+</View>

@@ -2,7 +2,7 @@ import { flow, getRoot, getSnapshot, types, isAlive } from "mobx-state-tree";
 import { DataStore, DataStoreItem } from "../../mixins/DataStore";
 import { getAnnotationSnapshot } from "../../sdk/lsf-utils";
 import { isDefined } from "../../utils/utils";
-import { Assignee } from "../Assignee";
+import { Assignee, collectReferencedUserIds } from "../Assignee";
 import { DynamicModel, registerModel } from "../DynamicModel";
 import { CustomJSON } from "../types";
 import { FF_DEV_2536, FF_LOPS_E_3, isFF } from "../../utils/feature-flags";
@@ -299,6 +299,7 @@ export const create = (columns) => {
         if (taskData && !taskData?.error) {
           const id = taskID ?? taskData.id;
           const snapshot = self.mergeSnapshot(id, taskData);
+          getRoot(self).ensureUserStubs?.(collectReferencedUserIds(snapshot));
 
           task = self.updateItem(id, {
             ...snapshot,

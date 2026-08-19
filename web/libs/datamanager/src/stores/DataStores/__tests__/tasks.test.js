@@ -9,6 +9,7 @@ mockModule("../Assignee", () => {
   const { types } = require("mobx-state-tree");
   return {
     Assignee: types.model("Assignee", { id: types.identifierNumber }),
+    collectReferencedUserIds: () => [],
   };
 });
 

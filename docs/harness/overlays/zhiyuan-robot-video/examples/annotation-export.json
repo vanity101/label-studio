@@ -1,0 +1,65 @@
+{
+  "result": [
+    {
+      "from_name": "videoLabels",
+      "to_name": "video",
+      "type": "timelinelabels",
+      "value": {
+        "ranges": [{"start": 1, "end": 20}],
+        "timelinelabels": ["Static"]
+      }
+    },
+    {
+      "from_name": "videoLabels",
+      "to_name": "video",
+      "type": "timelinelabels",
+      "value": {
+        "ranges": [{"start": 21, "end": 40}],
+        "timelinelabels": ["grasp"]
+      }
+    },
+    {
+      "from_name": "videoLabels",
+      "to_name": "video",
+      "type": "timelinelabels",
+      "value": {
+        "ranges": [{"start": 41, "end": 70}],
+        "timelinelabels": ["Place"]
+      }
+    },
+    {
+      "from_name": "videoLabels",
+      "to_name": "video",
+      "type": "timelinelabels",
+      "value": {
+        "ranges": [{"start": 71, "end": 90}],
+        "timelinelabels": ["End"]
+      }
+    },
+    {
+      "from_name": "videoLabels",
+      "to_name": "video",
+      "type": "timelinelabels",
+      "value": {
+        "ranges": [{"start": 91, "end": 120}],
+        "timelinelabels": ["Static"]
+      }
+    },
+    {
+      "from_name": "granularity",
+      "to_name": "video",
+      "type": "choices",
+      "value": {
+        "choices": ["简单"]
+      }
+    },
+    {
+      "from_name": "action_sequence",
+      "to_name": "video",
+      "type": "textarea",
+      "value": {
+        "text": ["抓住水瓶-倒水-放在桌上"]
+      }
+    }
+  ]
+}

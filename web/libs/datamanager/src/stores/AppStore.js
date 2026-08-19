@@ -590,8 +590,34 @@ export const AppStore = types
         },
       });
 
-      self.users.push(...list);
+      if (!Array.isArray(list)) return;
+
+      const existingById = new Map(self.users.map((user) => [Number(user.id), user]));
+      for (const incoming of list) {
+        const id = Number(incoming?.id ?? incoming?.user_id);
+        if (!Number.isFinite(id)) continue;
+        if (existingById.has(id)) continue;
+        self.users.push(incoming);
+        existingById.set(id, self.users[self.users.length - 1]);
+      }
     }),
+
+    /**
+     * Task list APIs often send annotators as bare ids (`[1]`). MST resolves
+     * those as `types.reference(User)` against AppStore.users; a missing id
+     * crashes the whole Data Manager page. Insert empty shells before apply.
+     */
+    ensureUserStubs(ids) {
+      if (!Array.isArray(ids) || ids.length === 0) return;
+
+      const have = new Set(self.users.map((user) => Number(user.id)));
+      for (const raw of ids) {
+        const id = Number(raw);
+        if (!Number.isFinite(id) || have.has(id)) continue;
+        self.users.push({ id });
+        have.add(id);
+      }
+    },
 
     fetchData: flow(function* ({ isLabelStream } = {}) {
       self.setLoading(true);

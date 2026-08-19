@@ -3,6 +3,7 @@ import { guidGenerator } from "../../utils/random";
 import { isDefined } from "../../utils/utils";
 import { DEFAULT_PAGE_SIZE, getStoredPageSize } from "../../components/Common/Pagination/Pagination";
 import { FF_LOPS_E_3, isFF } from "../../utils/feature-flags";
+import { collectReferencedUserIds } from "../../stores/Assignee";
 
 const listIncludes = (list, id) => {
   const index = id !== undefined ? Array.from(list).findIndex((item) => item.id === id) : -1;
@@ -81,6 +82,10 @@ const MixinBase = types
     },
 
     setList({ list, total, reload, associatedList = [] }) {
+      const root = getRoot(self);
+      const records = [...(list ?? []), ...(associatedList ?? [])];
+      root.ensureUserStubs?.(records.flatMap((item) => collectReferencedUserIds(item)));
+
       const newEntity = list.map((t) => ({
         ...t,
         source: JSON.stringify(t),

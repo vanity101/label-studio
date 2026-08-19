@@ -112,7 +112,7 @@ const Model = types
      *        In first two cases we need to update undo history only once
      */
     setRange([start, end], { mode } = {}) {
-      if (self.locked) return;
+      if (self.locked || self.object?.isDiscarded) return;
       if (mode === "new") {
         // we need to update existing history item while drawing a new region
         self.parent.annotation.history.setReplaceNextUndoState();
@@ -125,6 +125,19 @@ const Model = types
     },
   }));
 
+const DiscardLock = types.model("TimelineDiscardLock").views((self) => ({
+  isReadOnly() {
+    if (self.object?.isDiscarded) return true;
+    if (!isAlive(self)) return false;
+    return (
+      self.locked ||
+      self.readonly ||
+      self.annotation?.isReadOnly() ||
+      Boolean(self.parent && (self.parent.isReadOnly?.() || self.parent.result?.isReadOnly?.()))
+    );
+  },
+}));
+
 const TimelineRegionModel = types.compose(
   "TimelineRegionModel",
   RegionsMixin,
@@ -132,6 +145,7 @@ const TimelineRegionModel = types.compose(
   NormalizationMixin,
   EditableRegion,
   Model,
+  DiscardLock,
 );
 
 Registry.addRegionType(TimelineRegionModel, "video");

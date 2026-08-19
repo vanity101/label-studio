@@ -684,7 +684,7 @@ const HtxVideoView = ({ item, store }) => {
             disableView={!supportsTimelineRegions && !supportsRegions}
             framerate={item.framerate}
             controls={{ FramesControl: true }}
-            readonly={item.annotation?.isReadOnly()}
+            readonly={item.annotation?.isReadOnly() || item.isDiscarded}
             navigationBlocked={hasFrameBlockingClosableVideoVector(item)}
             navigationBlockedTooltip={VIDEO_VECTOR_FRAME_BLOCKED_TOOLTIP}
             customControls={[

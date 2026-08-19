@@ -19,7 +19,8 @@
   font-size: 14px;
   text-align: right;
 
-  &[readonly] {
+  &[readonly],
+  &:disabled {
     color: var(--color-neutral-content-subtlest);
     cursor: default;
 
@@ -27,4 +28,10 @@
       outline: none;
     }
   }
+}
+
+select.input {
+  width: 100%;
+  text-align: left;
+  height: 28px;
 }

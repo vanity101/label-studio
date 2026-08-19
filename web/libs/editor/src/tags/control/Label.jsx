@@ -281,6 +281,9 @@ const Model = types
     },
 
     onLabelInteract() {
+      if (self.parent?.type === "timelinelabels" && self.parent.handleLabelClick?.(self)) {
+        return;
+      }
       return self.toggleSelected();
     },
 

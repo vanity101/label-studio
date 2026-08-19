@@ -1,10 +1,15 @@
 import { observer } from "mobx-react";
 import type { MSTTimelineRegion } from "../../Timeline/Types";
+import { applyPhaseLabel, phaseLabelValues } from "../../../tags/control/timelineClickToSpan";
 import styles from "./TimelineRegionEditor.module.css";
 
 export const TimelineRegionEditor = observer(({ region }: { region: MSTTimelineRegion }) => {
   const { start, end } = region.ranges[0];
   const length = region.object.length;
+  const control = region.object?.timelineControl;
+  const labelOptions = phaseLabelValues(control?.tiedChildren ?? control?.children ?? []);
+  const currentLabel = region.labeling?.mainValue?.[0] ?? "";
+  const locked = Boolean(region.isReadOnly?.() || region.object?.isDiscarded);
 
   const changeStartTimeHandler = (value: number) => {
     if (+value === region.ranges[0].start) return;
@@ -16,10 +21,47 @@ export const TimelineRegionEditor = observer(({ region }: { region: MSTTimelineR
     region.setRange([region.ranges[0].start, +value]);
   };
 
+  const changeLabelHandler = (value: string) => {
+    applyPhaseLabel(region, control, value);
+  };
+
   return (
-    <div className={styles.container}>
-      <Field label="Start frame" value={start} onChange={changeStartTimeHandler} region={region} min={1} max={end} />
-      <Field label="End frame" value={end} onChange={changeEndTimeHandler} region={region} min={start} max={length} />
+    <div className={styles.container} style={{ ["--col-count" as string]: 2 }}>
+      <label className={styles.label} style={{ gridColumn: "1 / -1" }}>
+        <span className={styles.labelText}>Label</span>
+        <select
+          className={styles.input}
+          aria-label="Label"
+          disabled={locked || !labelOptions.length}
+          value={currentLabel}
+          onChange={(event) => changeLabelHandler(event.target.value)}
+        >
+          {currentLabel && !labelOptions.includes(currentLabel) ? (
+            <option value={currentLabel}>{currentLabel}</option>
+          ) : null}
+          {labelOptions.map((value) => (
+            <option key={value} value={value}>
+              {value}
+            </option>
+          ))}
+        </select>
+      </label>
+      <Field
+        label="Start frame"
+        value={start}
+        onChange={locked ? undefined : changeStartTimeHandler}
+        region={region}
+        min={1}
+        max={end}
+      />
+      <Field
+        label="End frame"
+        value={end}
+        onChange={locked ? undefined : changeEndTimeHandler}
+        region={region}
+        min={start}
+        max={length}
+      />
       <Field label="Duration" value={end - start + 1} region={region} />
     </div>
   );

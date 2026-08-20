@@ -27,7 +27,7 @@ function flatten(nested) {
   return [].concat(...nested);
 }
 
-// Keep in sync with core.settings.SUPPORTED_EXTENSIONS on the BE.
+// Keep in sync with core.settings.SUPPORTED_EXTENSIONS + rlds_decode.detect on the BE.
 const supportedExtensions = {
   text: ["txt"],
   audio: ["wav", "mp3", "flac", "m4a", "ogg"],
@@ -36,6 +36,7 @@ const supportedExtensions = {
   html: ["html", "htm", "xml"],
   pdf: ["pdf"],
   structuredData: ["csv", "tsv", "json"],
+  rlds: ["zip", "tfrecord"],
 };
 const allSupportedExtensions = flatten(Object.values(supportedExtensions));
 
@@ -44,6 +45,17 @@ function getFileExtension(fileName) {
     return fileName;
   }
   return fileName.split(".").pop().toLowerCase();
+}
+
+function isSupportedImportFile(fileName) {
+  if (!fileName) {
+    return false;
+  }
+  const lower = fileName.toLowerCase();
+  if (lower.includes(".tfrecord")) {
+    return true;
+  }
+  return allSupportedExtensions.includes(getFileExtension(fileName));
 }
 
 function traverseFileTree(item, path) {
@@ -301,7 +313,7 @@ export const ImportPage = ({
       const fd = new FormData();
 
       for (const f of files) {
-        if (!allSupportedExtensions.includes(getFileExtension(f.name))) {
+        if (!isSupportedImportFile(f.name)) {
           onError(new Error(`The filetype of file "${f.name}" is not supported.`));
           return;
         }
@@ -469,10 +481,17 @@ export const ImportPage = ({
                       <dd>{supportedExtensions.structuredData.join(", ")}</dd>
                       <dt>PDF</dt>
                       <dd>{supportedExtensions.pdf.join(", ")}</dd>
+                      <dt>RLDS / TFRecord</dt>
+                      <dd>{supportedExtensions.rlds.join(", ")}</dd>
                     </dl>
                     <div className="tips">
                       <b>Important:</b>
                       <ul className="mt-2 ml-4 list-disc font-normal">
+                        <li>
+                          For robot videos, upload a complete RLDS <code>1.0.0</code> folder or zip
+                          (dataset_info.json, features.json, and *.tfrecord*). Do not upload a single
+                          shard. Preview videos are decoded to MP4 at 10 fps.
+                        </li>
                         <li>
                           We recommend{" "}
                           <a

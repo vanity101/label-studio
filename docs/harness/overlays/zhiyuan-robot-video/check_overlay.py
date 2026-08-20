@@ -14,6 +14,7 @@ DISCARD_LABEL = "废弃"
 DISCARD_NAME = "discard"
 OVERLAY_DIR = Path(__file__).resolve().parent
 SINGLE_VIEW = OVERLAY_DIR / "configs" / "single-view.xml"
+SINGLE_VIEW_RLDS = OVERLAY_DIR / "configs" / "single-view-rlds.xml"
 MULTI_VIEW = OVERLAY_DIR / "configs" / "multi-view.xml"
 TASKS = OVERLAY_DIR / "examples" / "tasks-single-view.json"
 EXPORT = OVERLAY_DIR / "examples" / "annotation-export.json"
@@ -113,6 +114,14 @@ def check_single_view(root: ET.Element) -> None:
         raise CheckError("单视角必须有整段 Choices（细致度）")
     if not findall(root, "TextArea"):
         raise CheckError("单视角必须有整段 TextArea（动作序列）")
+
+
+def check_single_view_rlds(root: ET.Element) -> None:
+    check_single_view(root)
+    videos = findall(root, "Video")
+    rate = (videos[0].attrib.get("frameRate") or "").strip()
+    if not rate.startswith("10"):
+        raise CheckError(f"RLDS 单视角 frameRate 必须是 10，实际 {rate}")
 
 
 def check_multi_view(root: ET.Element) -> None:
@@ -402,6 +411,7 @@ def run_all() -> list[str]:
             errors.append(f"{name}: {exc}")
 
     capture("single-view", lambda: check_single_view(parse_config(SINGLE_VIEW)))
+    capture("single-view-rlds", lambda: check_single_view_rlds(parse_config(SINGLE_VIEW_RLDS)))
     capture("multi-view", lambda: check_multi_view(parse_config(MULTI_VIEW)))
     capture("tasks", lambda: check_tasks(load_json(TASKS)))
     capture("export-fixture", lambda: check_export_fixture(load_json(EXPORT)))
@@ -425,7 +435,7 @@ def main() -> int:
         return 1
     print("PASS")
     print(
-        "checked: single-view, multi-view, tasks, export-fixture, "
+        "checked: single-view, single-view-rlds, multi-view, tasks, export-fixture, "
         "missing-video, empty-annotation, whole-only, partial-timeline, "
         "overlap, official-export-package, discard-choices, discard-not-span"
     )

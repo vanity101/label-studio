@@ -26,7 +26,37 @@ RUN mkdir -p /label-studio/label_studio/core/static/js
 COPY pyproject.toml ../pyproject.toml
 RUN bun run build
 
+# 官方 tensorflow 只有 glibc wheel。在 Debian Python 3.12 里装 TF，再嵌进 Alpine 官方镜像。
+FROM python:3.12-slim-bookworm AS rlds-py
+ENV PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    PIP_INDEX_URL=https://pypi.tuna.tsinghua.edu.cn/simple \
+    PIP_TRUSTED_HOST=pypi.tuna.tsinghua.edu.cn
+RUN pip install --no-cache-dir \
+    -i https://pypi.tuna.tsinghua.edu.cn/simple \
+    --trusted-host pypi.tuna.tsinghua.edu.cn \
+    tensorflow tensorflow-datasets Pillow
+
 FROM heartexlabs/label-studio:latest
+USER root
+# RLDS zip 常超过默认 250MB；TensorFlow 在国内连 GCE/GCS 会把导入卡住。
+# 官方 latest 是 Alpine 3.x + Python 3.13（musl），ffmpeg 用 apk。
+ENV DATA_UPLOAD_MAX_MEMORY_SIZE=1073741824 \
+    NO_GCE_CHECK=true \
+    GCE_METADATA_TIMEOUT=0 \
+    TF_CPP_MIN_LOG_LEVEL=2 \
+    RLDS_IMPORT_MAX_EPISODES=16 \
+    RLDS_PYTHON=/opt/rlds/bin/python
+RUN sed -i 's#https\?://dl-cdn.alpinelinux.org#https://mirrors.tuna.tsinghua.edu.cn#g' /etc/apk/repositories \
+    && apk add --no-cache ffmpeg
+COPY --from=rlds-py /usr/local /opt/rlds-python
+COPY --from=rlds-py /lib /opt/rlds-host-lib
+COPY --from=rlds-py /usr/lib /opt/rlds-host-usr-lib
+COPY docs/harness/overlays/zhiyuan-robot-video/rlds_python.sh /opt/rlds/bin/python
+RUN chmod +x /opt/rlds/bin/python \
+    && /opt/rlds/bin/python -c "import tensorflow, tensorflow_datasets, PIL; print('rlds-python ok')"
+COPY label_studio/rlds_decode /label-studio/label_studio/rlds_decode
+COPY label_studio/data_import/uploader.py /label-studio/label_studio/data_import/uploader.py
+COPY label_studio/data_import/models.py /label-studio/label_studio/data_import/models.py
 COPY --from=frontend-builder /label-studio/web/dist /label-studio/web/dist
 COPY --from=frontend-builder /label-studio/label_studio/core/static/js /label-studio/label_studio/core/static/js
 COPY docs/harness/overlays/zhiyuan-robot-video/patches/base.html /label-studio/label_studio/templates/base.html

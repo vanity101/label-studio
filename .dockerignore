@@ -25,3 +25,4 @@ label_studio/**/*.pyc
 !pyproject.toml
 !uv.lock
 !docs/harness/overlays/zhiyuan-robot-video/patches/base.html
+!docs/harness/overlays/zhiyuan-robot-video/rlds_python.sh

@@ -328,7 +328,17 @@ class FileUpload(models.Model):
         file_uploads = FileUpload.objects.filter(project=project)
         if file_upload_ids:
             file_uploads = file_uploads.filter(id__in=file_upload_ids)
-        for file_upload in file_uploads:
+        upload_list = list(file_uploads)
+        from rlds_decode.ls_import import try_load_rlds_tasks
+
+        rlds_loaded = try_load_rlds_tasks(project, upload_list)
+        if rlds_loaded is not None:
+            rlds_tasks, rlds_formats, rlds_fields = rlds_loaded
+            if trim_size is not None:
+                rlds_tasks = rlds_tasks[:trim_size]
+            return rlds_tasks, rlds_formats, rlds_fields
+
+        for file_upload in upload_list:
             file_format = file_upload.format
             if formats and file_format not in formats:
                 continue
@@ -372,7 +382,19 @@ class FileUpload(models.Model):
         if file_upload_ids:
             file_uploads = file_uploads.filter(id__in=file_upload_ids)
 
-        for file_upload in file_uploads:
+        upload_list = list(file_uploads)
+        from rlds_decode.ls_import import try_load_rlds_tasks
+
+        rlds_loaded = try_load_rlds_tasks(project, upload_list)
+        if rlds_loaded is not None:
+            rlds_tasks, rlds_formats, rlds_fields = rlds_loaded
+            for i in range(0, len(rlds_tasks), batch_size):
+                yield rlds_tasks[i : i + batch_size], rlds_formats, rlds_fields
+            if not rlds_tasks:
+                yield [], rlds_formats, rlds_fields
+            return
+
+        for file_upload in upload_list:
             file_format = file_upload.format
             if formats and file_format not in formats:
                 continue

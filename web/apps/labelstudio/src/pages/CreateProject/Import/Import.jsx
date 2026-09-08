@@ -27,7 +27,7 @@ function flatten(nested) {
   return [].concat(...nested);
 }
 
-// Keep in sync with core.settings.SUPPORTED_EXTENSIONS + rlds_decode.detect on the BE.
+// Keep in sync with core.settings.SUPPORTED_EXTENSIONS + rlds_decode.detect + robot_import on the BE.
 const supportedExtensions = {
   text: ["txt"],
   audio: ["wav", "mp3", "flac", "m4a", "ogg"],
@@ -37,6 +37,7 @@ const supportedExtensions = {
   pdf: ["pdf"],
   structuredData: ["csv", "tsv", "json"],
   rlds: ["zip", "tfrecord"],
+  robot: ["zip", "hdf5", "h5", "yaml", "yml", "parquet", "jsonl"],
 };
 const allSupportedExtensions = flatten(Object.values(supportedExtensions));
 
@@ -483,6 +484,8 @@ export const ImportPage = ({
                       <dd>{supportedExtensions.pdf.join(", ")}</dd>
                       <dt>RLDS / TFRecord</dt>
                       <dd>{supportedExtensions.rlds.join(", ")}</dd>
+                      <dt>Robot HDF5 / LeRobot</dt>
+                      <dd>{supportedExtensions.robot.join(", ")}</dd>
                     </dl>
                     <div className="tips">
                       <b>Important:</b>
@@ -491,6 +494,13 @@ export const ImportPage = ({
                           For robot videos, upload a complete RLDS <code>1.0.0</code> folder or zip
                           (dataset_info.json, features.json, and *.tfrecord*). Do not upload a single
                           shard. Preview videos are decoded to MP4 at 10 fps.
+                        </li>
+                        <li>
+                          For robot videos, upload a YAM episode folder, a zip of episode_*
+                          directories, a minimal package (info.yaml + high_cam.hdf5), or a LeRobot
+                          v2/v2.1 dataset directory or zip (meta/info.json + data/*.parquet; mp4
+                          under videos/ is optional). Preview uses high_cam RGB. Do not mix with
+                          mp4 or json.
                         </li>
                         <li>
                           We recommend{" "}

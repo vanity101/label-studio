@@ -1,4 +1,4 @@
-"""Source contract for Create Project default Custom template (S2-T2 / FR-013…FR-018)."""
+"""Source contract for Create Project default Custom template (S2-T2 / S2-T3 / FR-013…FR-018)."""
 
 from __future__ import annotations
 
@@ -10,6 +10,7 @@ ROOT = Path(__file__).resolve().parents[3]
 CREATE = ROOT / "web/apps/labelstudio/src/pages/CreateProject/CreateProject.jsx"
 CONFIG = ROOT / "web/apps/labelstudio/src/pages/CreateProject/Config/Config.jsx"
 SETTINGS = ROOT / "web/apps/labelstudio/src/pages/Settings/LabelingSettings.jsx"
+SETTINGS_INDEX = ROOT / "web/apps/labelstudio/src/pages/Settings/index.jsx"
 TEMPLATE = ROOT / "web/apps/labelstudio/src/pages/CreateProject/Config/robotDefaultTemplate.js"
 
 
@@ -52,12 +53,47 @@ def test_preset_xml_is_dcp37_not_overlay_30fps():
     assert "ROBOT_DEFAULT_TEMPLATE" in xml
 
 
+def test_settings_route_still_renders_config_page():
+    index = SETTINGS_INDEX.read_text(encoding="utf-8")
+    assert 'import { LabelingSettings } from "./LabelingSettings"' in index
+    assert "path: \"/settings\"" in index or "path: '/settings'" in index
+    assert "LabelingSettings," in index
+    src = SETTINGS.read_text(encoding="utf-8")
+    assert 'from "../CreateProject/Config/Config"' in src
+    assert 'LabelingSettings.path = "/labeling"' in src
+    assert "config={project.label_config}" in src
+    start = src.index("<ConfigPage")
+    end = src.index("/>", start)
+    jsx = src[start : end + 2]
+    assert "<ConfigPage" in jsx
+    assert "defaultToCustomTemplate" not in jsx
+    assert "presetConfig" not in jsx
+    assert "ROBOT_DEFAULT_TEMPLATE" not in jsx
+
+
+def test_settings_does_not_import_robot_preset_module():
+    settings = SETTINGS.read_text(encoding="utf-8")
+    index = SETTINGS_INDEX.read_text(encoding="utf-8")
+    assert "robotDefaultTemplate" not in settings
+    assert "robotDefaultTemplate" not in index
+    assert "ROBOT_DEFAULT_TEMPLATE" not in index
+
+
+def test_config_page_preset_stays_opt_in_when_settings_omits_props():
+    src = CONFIG.read_text(encoding="utf-8")
+    assert "defaultToCustomTemplate = false" in src
+    assert "usePresetOnFirstView = Boolean(defaultToCustomTemplate && presetConfig)" in src
+
+
 def main() -> int:
     tests = [
         test_create_project_passes_preset_props,
         test_labeling_settings_does_not_pass_preset,
         test_config_page_bootstraps_view_and_code_from_preset,
         test_preset_xml_is_dcp37_not_overlay_30fps,
+        test_settings_route_still_renders_config_page,
+        test_settings_does_not_import_robot_preset_module,
+        test_config_page_preset_stays_opt_in_when_settings_omits_props,
     ]
     failed = 0
     for test in tests:

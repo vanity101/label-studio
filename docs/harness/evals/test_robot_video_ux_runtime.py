@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 import re
 import sys
 import traceback
@@ -11,10 +12,31 @@ import urllib.request
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[3]
+EVALS = Path(__file__).resolve().parent
 OVERLAY = ROOT / "docs" / "harness" / "overlays" / "zhiyuan-robot-video"
 DOCKERFILE = OVERLAY / "Dockerfile"
 BASE_PATCH = OVERLAY / "patches" / "base.html"
-LIVE = "http://127.0.0.1:8081"
+LIVE = os.environ.get("LABEL_STUDIO_URL", "http://127.0.0.1:8080").rstrip("/")
+
+
+def _reexec_venv_if_playwright_missing() -> None:
+    try:
+        import playwright  # noqa: F401
+        return
+    except ImportError:
+        pass
+    venv_python = ROOT / ".venv" / "bin" / "python"
+    public_venv = Path("/Users/vanity/Public/label-studio/.venv/bin/python")
+    for candidate in (venv_python, public_venv):
+        if candidate.is_file() and Path(sys.executable).resolve() != candidate.resolve():
+            os.execv(str(candidate), [str(candidate), *sys.argv])
+
+
+_reexec_venv_if_playwright_missing()
+if str(EVALS) not in sys.path:
+    sys.path.insert(0, str(EVALS))
+
+from browser_ui import verify_click_place, verify_create_project_preset_clicks  # noqa: E402
 
 
 def test_dockerfile_is_official_plus_frontend():
@@ -80,6 +102,16 @@ def test_live_app_js_is_vite_with_click_to_span():
     assert "nextClickSpan" in blob or "TimelineLabelsClickToSpan" in blob
 
 
+def test_live_browser_click_place_creates_span():
+    """Must open Chromium, log in, and click Place. curl / JS grep is not this test."""
+    verify_click_place()
+
+
+def test_live_browser_create_project_preset_clicks():
+    """Must click Labeling Setup → Browse Templates → Custom/Code, then Settings isolation."""
+    verify_create_project_preset_clicks()
+
+
 def _run_standalone() -> int:
     tests = [
         test_dockerfile_is_official_plus_frontend,
@@ -87,6 +119,8 @@ def _run_standalone() -> int:
         test_overlay_html_loads_vite_as_module,
         test_live_homepage_is_not_blank,
         test_live_app_js_is_vite_with_click_to_span,
+        test_live_browser_click_place_creates_span,
+        test_live_browser_create_project_preset_clicks,
     ]
     failed = []
     for test in tests:

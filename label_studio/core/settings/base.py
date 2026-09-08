@@ -650,6 +650,13 @@ SUPPORTED_EXTENSIONS = set(
         '.webm',
         '.webp',
         '.pdf',
+        '.zip',
+        '.hdf5',
+        '.h5',
+        '.yaml',
+        '.yml',
+        '.parquet',
+        '.jsonl',
     ]
 )
 

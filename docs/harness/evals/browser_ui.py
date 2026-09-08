@@ -380,3 +380,102 @@ def verify_create_project_preset_clicks() -> dict:
         if "Executable doesn't exist" in str(exc) or name in {"Error"}:
             raise AssertionError(playwright_missing_message(exc)) from exc
         raise AssertionError(f"浏览器核验失败（禁止 skip）: {exc}") from exc
+
+
+IMPORT_MARKERS = (
+    "LeRobot",
+    "parquet",
+    "jsonl",
+    "Do not mix with",
+    "Drag & drop files here",
+)
+_IMPORT_SHOT_RAW = os.environ.get("DCP41_INT_SCREENSHOT_DIR", "").strip()
+IMPORT_SHOT_DIR = Path(_IMPORT_SHOT_RAW).expanduser() if _IMPORT_SHOT_RAW else SCREENSHOT_DIR
+
+
+def _import_shot(page, name: str) -> None:
+    if not IMPORT_SHOT_DIR:
+        return
+    IMPORT_SHOT_DIR.mkdir(parents=True, exist_ok=True)
+    page.screenshot(path=str(IMPORT_SHOT_DIR / name), full_page=True)
+
+
+def verify_import_lerobot_clicks() -> dict:
+    """Click Data Import upload/dropzone and assert LeRobot copy plus mix/orphan errors."""
+    import_live = os.environ.get("LABEL_STUDIO_IMPORT_URL", "").strip().rstrip("/") or LIVE
+    evals = Path(__file__).resolve().parent
+    mix_hdf5 = evals / "fixtures" / "import-mix" / "high_cam.hdf5"
+    mix_mp4 = evals / "fixtures" / "import-mix" / "clip.mp4"
+    orphan = evals / "fixtures" / "import-mix" / "orphan.parquet"
+    mix_hdf5.parent.mkdir(parents=True, exist_ok=True)
+    if not mix_hdf5.is_file():
+        mix_hdf5.write_bytes(b"HDF5")
+    if not mix_mp4.is_file():
+        mix_mp4.write_bytes(b"\x00\x00")
+    if not orphan.is_file():
+        orphan.write_bytes(b"PAR1")
+
+    sync_playwright = require_playwright()
+    try:
+        with sync_playwright() as playwright:
+            browser = playwright.chromium.launch(headless=True)
+            page = browser.new_page(viewport={"width": 1440, "height": 900})
+            try:
+                ensure_logged_in(page, live=import_live)
+                page.wait_for_selector(".app-wrapper", timeout=30000)
+                page.goto(import_live + "/", wait_until="domcontentloaded", timeout=30000)
+                page.wait_for_selector(".app-wrapper", timeout=30000)
+                _click_visible_text(page, "Create Project")
+                page.get_by_text("Project Name", exact=True).first.wait_for(state="visible", timeout=15000)
+                _click_visible_text(page, "Data Import")
+                page.get_by_text("Drag & drop files here", exact=False).first.wait_for(
+                    state="visible", timeout=20000
+                )
+                body = page.locator("body").inner_text()
+                assert all(marker in body for marker in IMPORT_MARKERS), (
+                    f"Data Import 未见 LeRobot 提示: missing "
+                    f"{[m for m in IMPORT_MARKERS if m not in body]}"
+                )
+                _import_shot(page, "01-data-import-lerobot-copy.png")
+
+                upload = page.get_by_role("button", name="Upload file")
+                upload.wait_for(state="visible", timeout=10000)
+                with page.expect_file_chooser(timeout=10000) as chooser_info:
+                    upload.click()
+                chooser_info.value.set_files([str(mix_hdf5), str(mix_mp4)])
+                page.wait_for_timeout(2500)
+                mix_text = page.locator("body").inner_text()
+                mix_html = page.content()
+                assert "混传" in mix_text or "混传" in mix_html or "mix" in mix_text.lower(), (
+                    f"点 Upload 混传 hdf5+mp4 后未见拒绝: {mix_text[:800]}"
+                )
+                _import_shot(page, "02-upload-mix-rejected.png")
+
+                page.goto(import_live + "/", wait_until="domcontentloaded", timeout=30000)
+                page.wait_for_selector(".app-wrapper", timeout=30000)
+                _click_visible_text(page, "Create Project")
+                _click_visible_text(page, "Data Import")
+                page.get_by_text("or click to browse", exact=False).first.wait_for(state="visible", timeout=15000)
+                drop = page.locator("label[for=file-input]").first
+                with page.expect_file_chooser(timeout=10000) as chooser_info:
+                    drop.click()
+                chooser_info.value.set_files([str(orphan)])
+                page.wait_for_timeout(2500)
+                orphan_text = page.locator("body").inner_text()
+                orphan_html = page.content()
+                assert (
+                    "无法识别" in orphan_text
+                    or "无法识别" in orphan_html
+                    or "LeRobot" in orphan_text
+                ), f"点拖放区上传孤 parquet 后未见错误: {orphan_text[:800]}"
+                _import_shot(page, "03-dropzone-orphan-parquet.png")
+                return {"ok": True, "markers": list(IMPORT_MARKERS)}
+            finally:
+                browser.close()
+    except AssertionError:
+        raise
+    except Exception as exc:  # noqa: BLE001
+        name = type(exc).__name__
+        if "Executable doesn't exist" in str(exc) or name in {"Error"}:
+            raise AssertionError(playwright_missing_message(exc)) from exc
+        raise AssertionError(f"浏览器核验失败（禁止 skip）: {exc}") from exc

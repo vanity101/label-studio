@@ -55,6 +55,7 @@ COPY docs/harness/overlays/zhiyuan-robot-video/rlds_python.sh /opt/rlds/bin/pyth
 RUN chmod +x /opt/rlds/bin/python \
     && /opt/rlds/bin/python -c "import tensorflow, tensorflow_datasets, PIL; print('rlds-python ok')"
 COPY label_studio/rlds_decode /label-studio/label_studio/rlds_decode
+COPY label_studio/robot_import /label-studio/label_studio/robot_import
 COPY label_studio/data_import/uploader.py /label-studio/label_studio/data_import/uploader.py
 COPY label_studio/data_import/models.py /label-studio/label_studio/data_import/models.py
 COPY --from=frontend-builder /label-studio/web/dist /label-studio/web/dist

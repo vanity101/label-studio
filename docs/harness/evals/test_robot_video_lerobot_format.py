@@ -127,6 +127,14 @@ def test_reject_non_v2_codebase():
 
 def test_list_episodes_allows_missing_videos_and_null_video_path():
     with tempfile.TemporaryDirectory() as tmp:
+        copied = _copy_fixture(Path(tmp) / "no_videos_dir")
+        shutil.rmtree(copied / "videos")
+        (copied / "data").mkdir(exist_ok=True)
+        copied_episodes = list_episodes(copied)
+        assert len(copied_episodes) == 1
+        assert copied_episodes[0]["episode_id"] == "episode_000000"
+        assert copied_episodes[0]["video_path"] is None
+
         root = Path(tmp) / "parquet_only"
         meta = root / "meta"
         meta.mkdir(parents=True)

@@ -57,11 +57,13 @@ def check_tasks_max_file_size(value):
 
 
 def check_extensions(files):
-    from rlds_decode.detect import is_supported_upload_name
+    from rlds_decode.detect import is_supported_upload_name as is_rlds_upload_name
+    from robot_import.detect import is_supported_upload_name as is_robot_upload_name
 
     for filename, file_obj in files.items():
         name = getattr(file_obj, 'name', filename) or filename
-        if is_supported_upload_name(name, settings.SUPPORTED_EXTENSIONS):
+        extra = settings.SUPPORTED_EXTENSIONS
+        if is_rlds_upload_name(name, extra) or is_robot_upload_name(name, extra):
             continue
         _, ext = os.path.splitext(name)
         raise ValidationError(f'{ext} extension is not supported')

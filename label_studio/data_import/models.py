@@ -329,7 +329,15 @@ class FileUpload(models.Model):
         if file_upload_ids:
             file_uploads = file_uploads.filter(id__in=file_upload_ids)
         upload_list = list(file_uploads)
+        from robot_import.ls_import import try_load_robot_tasks
         from rlds_decode.ls_import import try_load_rlds_tasks
+
+        robot_loaded = try_load_robot_tasks(project, upload_list)
+        if robot_loaded is not None:
+            robot_tasks, robot_formats, robot_fields = robot_loaded
+            if trim_size is not None:
+                robot_tasks = robot_tasks[:trim_size]
+            return robot_tasks, robot_formats, robot_fields
 
         rlds_loaded = try_load_rlds_tasks(project, upload_list)
         if rlds_loaded is not None:
@@ -383,7 +391,17 @@ class FileUpload(models.Model):
             file_uploads = file_uploads.filter(id__in=file_upload_ids)
 
         upload_list = list(file_uploads)
+        from robot_import.ls_import import try_load_robot_tasks
         from rlds_decode.ls_import import try_load_rlds_tasks
+
+        robot_loaded = try_load_robot_tasks(project, upload_list)
+        if robot_loaded is not None:
+            robot_tasks, robot_formats, robot_fields = robot_loaded
+            for i in range(0, len(robot_tasks), batch_size):
+                yield robot_tasks[i : i + batch_size], robot_formats, robot_fields
+            if not robot_tasks:
+                yield [], robot_formats, robot_fields
+            return
 
         rlds_loaded = try_load_rlds_tasks(project, upload_list)
         if rlds_loaded is not None:

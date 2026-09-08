@@ -12,6 +12,7 @@ from . import RobotDependencyError, RobotImportError
 from .detect import (
     classify_upload_names,
     is_generated_preview_name,
+    is_zip_name,
     original_relative_name,
     strip_upload_uuid_prefix,
 )
@@ -147,6 +148,12 @@ def try_load_robot_tasks(project, file_uploads: list) -> tuple[list, dict, set] 
             scratch = Path(tmp)
             pairs = [(original_upload_name(item), _file_upload_to_path(item, scratch)) for item in file_uploads]
             bronze = stage_named_files(bronze_root / "bronze", pairs)
+            classified = classify_staged_root(bronze)
+            zip_only = bool(names) and all(
+                is_zip_name(name) or is_generated_preview_name(name) for name in names
+            )
+            if classified == "empty" and zip_only:
+                return None
             source_kind = route_staged_robot(bronze)
             from .import_batch import decode_bronze_to_tasks_isolated, decode_lerobot_to_tasks_isolated
 

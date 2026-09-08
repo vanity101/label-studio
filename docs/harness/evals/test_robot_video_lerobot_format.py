@@ -86,6 +86,8 @@ def test_pick_video_feature_falls_back_to_laptop_then_first():
         }
     }
     assert pick_video_feature(first_only) == "observation.images.wrist"
+    assert pick_video_feature({"features": {"action": {"dtype": "float32"}}}) == ""
+    assert pick_video_feature({}) == ""
 
 
 def test_reject_missing_info_json():
@@ -123,24 +125,48 @@ def test_reject_non_v2_codebase():
             raise AssertionError("expected RobotImportError for v1")
 
 
-def test_reject_zero_playable_episodes():
+def test_list_episodes_allows_missing_videos_and_null_video_path():
     with tempfile.TemporaryDirectory() as tmp:
-        root = Path(tmp) / "novid"
-        shutil.copytree(FIXTURE, root)
-        video = (
-            root
+        root = Path(tmp) / "parquet_only"
+        meta = root / "meta"
+        meta.mkdir(parents=True)
+        (root / "data").mkdir()
+        (root / "data" / "episode_000000.parquet").write_bytes(b"PAR1")
+        (meta / "info.json").write_text(
+            json.dumps(
+                {
+                    "codebase_version": "v2.1",
+                    "fps": 10,
+                    "total_episodes": 1,
+                    "video_path": None,
+                    "features": {"action": {"dtype": "float32", "shape": [7]}},
+                }
+            ),
+            encoding="utf-8",
+        )
+        parsed = parse_info(root)
+        assert parsed["video_feature"] == ""
+        assert parsed["fps"] == 10
+        episodes = list_episodes(root)
+        assert len(episodes) == 1
+        assert episodes[0]["episode_id"] == "episode_000000"
+        assert episodes[0]["video_path"] is None
+
+        with_null = _copy_fixture(Path(tmp) / "null_path")
+        (
+            with_null
             / "videos"
             / "chunk-000"
             / "observation.images.cam_high"
             / "episode_000000.mp4"
-        )
-        video.unlink()
-        try:
-            list_episodes(root)
-        except RobotImportError as exc:
-            assert "预览" in str(exc) or "mp4" in str(exc)
-        else:
-            raise AssertionError("expected RobotImportError when mp4 is missing")
+        ).unlink()
+        info_path = with_null / "meta" / "info.json"
+        info = json.loads(info_path.read_text(encoding="utf-8"))
+        info["video_path"] = None
+        info_path.write_text(json.dumps(info), encoding="utf-8")
+        listed = list_episodes(with_null)
+        assert listed[0]["episode_id"] == "episode_000000"
+        assert listed[0]["video_path"] is None
 
 
 def _run_standalone() -> int:
@@ -151,7 +177,7 @@ def _run_standalone() -> int:
         test_pick_video_feature_falls_back_to_laptop_then_first,
         test_reject_missing_info_json,
         test_reject_non_v2_codebase,
-        test_reject_zero_playable_episodes,
+        test_list_episodes_allows_missing_videos_and_null_video_path,
     ]
     failed = []
     for test in tests:

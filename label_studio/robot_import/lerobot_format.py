@@ -57,16 +57,13 @@ def parse_info(root: Path | str) -> dict[str, Any]:
 
 def video_feature_keys(info: dict[str, Any]) -> list[str]:
     features = info.get("features")
-    if not isinstance(features, dict) or not features:
-        raise RobotImportError("meta/info.json 缺少 features，无法选择预览视频")
-    keys = [
+    if not isinstance(features, dict):
+        return []
+    return [
         name
         for name, spec in features.items()
         if isinstance(spec, dict) and str(spec.get("dtype") or "").lower() == "video"
     ]
-    if not keys:
-        raise RobotImportError("meta/info.json 没有 dtype=video 的特征，无法预览")
-    return keys
 
 
 def _video_rank(name: str) -> int:
@@ -79,17 +76,21 @@ def _video_rank(name: str) -> int:
 
 
 def pick_video_feature(info: dict[str, Any]) -> str:
-    """ASM-002：high/head/cam_high → laptop → 第一个 video 特征。"""
+    """ASM-002：high/head/cam_high → laptop → 第一个 video 特征。无 video 特征时返回空串。"""
     keys = video_feature_keys(info)
+    if not keys:
+        return ""
     return min(keys, key=lambda name: (_video_rank(name), keys.index(name)))
 
 
-def fps_from_info(info: dict[str, Any], video_feature: str | None = None) -> float:
+def fps_from_info(info: dict[str, Any], video_feature: str | None = None) -> float | None:
     raw = info.get("fps")
     fps = _positive_fps(raw)
     if fps is not None:
         return fps
-    feature_name = video_feature or pick_video_feature(info)
+    feature_name = video_feature if video_feature is not None else pick_video_feature(info)
+    if not feature_name:
+        return None
     spec = (info.get("features") or {}).get(feature_name) or {}
     extra = spec.get("info") if isinstance(spec, dict) else None
     if isinstance(extra, dict):
@@ -97,7 +98,7 @@ def fps_from_info(info: dict[str, Any], video_feature: str | None = None) -> flo
             fps = _positive_fps(extra.get(key))
             if fps is not None:
                 return fps
-    raise RobotImportError("meta/info.json 缺少可用 fps，无法导入")
+    return None
 
 
 def _positive_fps(raw: Any) -> float | None:
@@ -116,15 +117,13 @@ def list_episodes(root: Path | str) -> list[dict[str, Any]]:
     parsed = parse_info(root)
     dataset_root: Path = parsed["root"]
     info: dict[str, Any] = parsed["info"]
-    video_feature: str = parsed["video_feature"]
-    fps: float = parsed["fps"]
-    camera = video_feature.rsplit(".", 1)[-1]
+    video_feature: str = parsed["video_feature"] or ""
+    fps = parsed["fps"]
+    camera = video_feature.rsplit(".", 1)[-1] if video_feature else ""
 
     items: list[dict[str, Any]] = []
     for index, episode_id in _episode_ids(dataset_root, info):
         video_path = resolve_video_path(dataset_root, info, video_feature, index)
-        if video_path is None or not video_path.is_file():
-            continue
         items.append(
             {
                 "episode_id": episode_id,
@@ -135,7 +134,7 @@ def list_episodes(root: Path | str) -> list[dict[str, Any]]:
             }
         )
     if not items:
-        raise RobotImportError("没有可预览的集：缺少对应 mp4，或视频特征无法落到文件")
+        raise RobotImportError("无法列出 episode：meta/episodes.jsonl 与 total_episodes 都为空")
     return items
 
 
@@ -192,7 +191,10 @@ def resolve_video_path(
     except (TypeError, ValueError, ZeroDivisionError):
         chunk = episode_index // DEFAULT_CHUNKS_SIZE
 
-    template = str(info.get("video_path") or DEFAULT_VIDEO_PATH)
+    if not video_feature:
+        return None
+    raw_template = info.get("video_path")
+    template = DEFAULT_VIDEO_PATH if raw_template in (None, "", "null") else str(raw_template)
     candidates: list[Path] = []
     try:
         relative = template.format(

@@ -36,7 +36,11 @@ _reexec_venv_if_playwright_missing()
 if str(EVALS) not in sys.path:
     sys.path.insert(0, str(EVALS))
 
-from browser_ui import verify_click_place, verify_create_project_preset_clicks  # noqa: E402
+from browser_ui import (  # noqa: E402
+    verify_click_place,
+    verify_create_project_preset_clicks,
+    verify_import_lerobot_clicks,
+)
 
 
 def test_dockerfile_is_official_plus_frontend():
@@ -112,6 +116,11 @@ def test_live_browser_create_project_preset_clicks():
     verify_create_project_preset_clicks()
 
 
+def test_live_browser_import_lerobot_clicks():
+    """Must click Data Import upload/dropzone and see LeRobot copy plus mix/orphan errors."""
+    verify_import_lerobot_clicks()
+
+
 def _run_standalone() -> int:
     tests = [
         test_dockerfile_is_official_plus_frontend,
@@ -121,6 +130,7 @@ def _run_standalone() -> int:
         test_live_app_js_is_vite_with_click_to_span,
         test_live_browser_click_place_creates_span,
         test_live_browser_create_project_preset_clicks,
+        test_live_browser_import_lerobot_clicks,
     ]
     failed = []
     for test in tests:

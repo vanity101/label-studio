@@ -83,6 +83,7 @@ def test_config_page_preset_stays_opt_in_when_settings_omits_props():
     src = CONFIG.read_text(encoding="utf-8")
     assert "defaultToCustomTemplate = false" in src
     assert "usePresetOnFirstView = Boolean(defaultToCustomTemplate && presetConfig)" in src
+    assert "mode === \"view\" && template" in src
 
 
 def main() -> int:

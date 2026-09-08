@@ -875,7 +875,7 @@ export const ConfigPage = ({
           onCustomTemplate={onCustomTemplate}
         />
       )}
-      {mode === "view" && (
+      {mode === "view" && template && (
         <Configurator
           case="view"
           columns={columns}

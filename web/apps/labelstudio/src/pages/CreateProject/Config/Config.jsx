@@ -389,8 +389,9 @@ const Configurator = ({
   disableSaveButton,
   warning,
   hasChanges,
+  preferCodeView = false,
 }) => {
-  const [configure, setConfigure] = React.useState(isEmptyConfig(config) ? "code" : "visual");
+  const [configure, setConfigure] = React.useState(preferCodeView || isEmptyConfig(config) ? "code" : "visual");
   const [visualLoaded, loadVisual] = React.useState(configure === "visual");
   const [waiting, setWaiting] = React.useState(false);
   const [saved, setSaved] = React.useState(false);
@@ -761,9 +762,13 @@ export const ConfigPage = ({
   disableSaveButton,
   show = true,
   hasChanges,
+  defaultToCustomTemplate = false,
+  presetConfig,
 }) => {
-  const [config, _setConfig] = React.useState("");
-  const [mode, setMode] = React.useState("list"); // view | list
+  const usePresetOnFirstView = Boolean(defaultToCustomTemplate && presetConfig);
+  const firstViewConfig = initialConfig || (usePresetOnFirstView ? presetConfig : "");
+  const [config, _setConfig] = React.useState(firstViewConfig);
+  const [mode, setMode] = React.useState(firstViewConfig ? "view" : "list"); // view | list
   const [selectedGroup, _setSelectedGroup] = React.useState(null);
   const [selectedRecipe, setSelectedRecipe] = React.useState(null);
   const [template, setCurrentTemplate] = React.useState(null);
@@ -850,8 +855,8 @@ export const ConfigPage = ({
   }, []);
 
   React.useEffect(() => {
-    if (initialConfig) {
-      setTemplate(initialConfig);
+    if (firstViewConfig) {
+      setTemplate(firstViewConfig);
       setMode("view");
     }
   }, []);
@@ -880,6 +885,7 @@ export const ConfigPage = ({
           template={template}
           setTemplate={setTemplate}
           onBrowse={onBrowse}
+          preferCodeView={usePresetOnFirstView}
           onValidate={onValidate}
           disableSaveButton={disableSaveButton}
           onSaveClick={onSaveClick}

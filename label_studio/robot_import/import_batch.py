@@ -8,6 +8,7 @@ from typing import Optional
 
 from . import DEFAULT_CAMERA, import_max_episodes
 from . import yam_hdf5
+from .lerobot_detect import resolve_lerobot_dataset_root
 from .lerobot_format import list_episodes as list_lerobot_episodes
 from .lerobot_materialize import materialize_episode as materialize_lerobot_episode
 from .materialize import materialize_episode
@@ -79,7 +80,8 @@ def decode_lerobot_to_tasks(
     existing = existing_episode_ids or set()
     limit = max_episodes if max_episodes is not None else import_max_episodes()
     result = DecodeResult()
-    for item in list_lerobot_episodes(bronze):
+    dataset_root = resolve_lerobot_dataset_root(bronze)
+    for item in list_lerobot_episodes(dataset_root):
         result.listed += 1
         episode_id = item["episode_id"]
         if episode_id in existing:
@@ -88,7 +90,7 @@ def decode_lerobot_to_tasks(
         if len(result.tasks) >= limit:
             result.truncated = True
             break
-        materialized = materialize_lerobot_episode(item, preview_root, dataset_root=bronze)
+        materialized = materialize_lerobot_episode(item, preview_root, dataset_root=dataset_root)
         preview = str(materialized["preview_path"])
         camera = materialized.get("camera") or item.get("camera") or DEFAULT_CAMERA
         fps = materialized.get("fps")

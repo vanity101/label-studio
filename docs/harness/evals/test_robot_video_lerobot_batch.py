@@ -26,6 +26,7 @@ from robot_import.import_batch import (  # noqa: E402
     decode_lerobot_to_tasks_isolated,
     skip_existing,
 )
+from robot_import.lerobot_format import parse_info  # noqa: E402
 from robot_import.lerobot_materialize import HIGH_CAM_COLUMN  # noqa: E402
 
 
@@ -187,6 +188,38 @@ def test_isolated_worker_parquet_batch():
         assert Path(result.tasks[0]["data"]["video"]).is_file()
 
 
+def test_nested_zip_wrapper_decodes_from_staging_parent():
+    _require_batch_deps()
+    with tempfile.TemporaryDirectory() as tmp:
+        staged = Path(tmp) / "bronze"
+        inner = staged / "lerobot_0907_test2"
+        shutil.copytree(FIXTURE, inner)
+        try:
+            parse_info(staged)
+        except RobotImportError as exc:
+            assert "meta/info.json" in str(exc)
+        else:
+            raise AssertionError("parse_info on zip wrapper parent should fail")
+        result = decode_lerobot_to_tasks(staged, Path(tmp) / "media")
+        assert result.listed == 1
+        assert len(result.tasks) == 1
+        data = result.tasks[0]["data"]
+        assert data["source_type"] == "lerobot"
+        assert data["episode_id"] == "episode_000000"
+        assert Path(data["video"]).is_file()
+
+
+def test_isolated_nested_zip_wrapper():
+    _require_batch_deps()
+    with tempfile.TemporaryDirectory() as tmp:
+        staged = Path(tmp) / "bronze"
+        shutil.copytree(FIXTURE, staged / "lerobot_0907_test2")
+        result = decode_lerobot_to_tasks_isolated(staged, Path(tmp) / "media")
+        assert result.listed == 1
+        assert result.tasks[0]["data"]["episode_id"] == "episode_000000"
+        assert Path(result.tasks[0]["data"]["video"]).is_file()
+
+
 def _write_l_cam_only_parquet(path: Path) -> None:
     import pyarrow as pa
     import pyarrow.parquet as pq
@@ -245,6 +278,8 @@ def _run_standalone() -> int:
         test_parquet_high_cam_without_videos,
         test_max_episodes_truncates,
         test_isolated_worker_parquet_batch,
+        test_nested_zip_wrapper_decodes_from_staging_parent,
+        test_isolated_nested_zip_wrapper,
         test_reject_no_preview_source,
         test_does_not_rewrite_hdf5_eval_or_t1_t3_files,
     ]

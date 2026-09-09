@@ -16,7 +16,7 @@ from .detect import (
     original_relative_name,
     strip_upload_uuid_prefix,
 )
-from .lerobot_detect import classify_staged_root
+from .lerobot_detect import classify_staged_root, resolve_lerobot_dataset_root
 from .stage import stage_named_files
 
 logger = logging.getLogger(__name__)
@@ -157,11 +157,12 @@ def try_load_robot_tasks(project, file_uploads: list) -> tuple[list, dict, set] 
             source_kind = route_staged_robot(bronze)
             from .import_batch import decode_bronze_to_tasks_isolated, decode_lerobot_to_tasks_isolated
 
+            decode_root = resolve_lerobot_dataset_root(bronze) if source_kind == "lerobot" else bronze
             decode = (
                 decode_lerobot_to_tasks_isolated if source_kind == "lerobot" else decode_bronze_to_tasks_isolated
             )
             result = decode(
-                bronze,
+                decode_root,
                 preview_root,
                 existing_episode_ids=existing_episode_ids(project),
             )

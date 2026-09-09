@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+from . import RobotImportError
 from .detect import find_episode_dirs
 
 ClassifyKind = str
@@ -24,6 +25,25 @@ def classify_staged_root(path: Path | str) -> ClassifyKind:
     if lerobot:
         return "lerobot"
     return "empty"
+
+
+def lerobot_dataset_roots(path: Path | str) -> list[Path]:
+    """Staged 目录下所有 LeRobot v2 数据集根（含套一层 zip 目录）。"""
+    root = Path(path)
+    if not root.is_dir():
+        return []
+    return _lerobot_dataset_roots(root)
+
+
+def resolve_lerobot_dataset_root(path: Path | str) -> Path:
+    """交给 decode 的唯一 LeRobot 根。zip 解开后套一层目录时返回内层，而不是 staging 父目录。"""
+    found = lerobot_dataset_roots(path)
+    if not found:
+        raise RobotImportError("缺少 meta/info.json，无法识别为 LeRobot 数据集")
+    if len(found) > 1:
+        names = ", ".join(item.name for item in found[:8])
+        raise RobotImportError(f"同一批次发现多个 LeRobot 数据集根，请只上传一套: {names}")
+    return found[0]
 
 
 def _under_images(path: Path, root: Path) -> bool:
@@ -57,7 +77,7 @@ def _lerobot_dataset_roots(root: Path) -> list[Path]:
             continue
         seen.add(resolved)
         if _is_lerobot_v2_root(dataset_root, root):
-            found.append(dataset_root)
+            found.append(resolved)
     return found
 
 

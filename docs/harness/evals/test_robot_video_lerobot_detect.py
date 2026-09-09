@@ -14,7 +14,11 @@ LS = ROOT / "label_studio"
 if str(LS) not in sys.path:
     sys.path.insert(0, str(LS))
 
-from robot_import.lerobot_detect import classify_staged_root  # noqa: E402
+from robot_import import RobotImportError  # noqa: E402
+from robot_import.lerobot_detect import (  # noqa: E402
+    classify_staged_root,
+    resolve_lerobot_dataset_root,
+)
 
 
 def _write_yam_episode(root: Path, episode_id: str = "episode_000000") -> Path:
@@ -72,6 +76,38 @@ def test_lerobot_nested_zip_layout_is_lerobot():
         dataset = staged / "lerobot_0907_test2"
         _write_lerobot_root(dataset, version="v2.1", video_path=None)
         assert classify_staged_root(staged) == "lerobot"
+
+
+def test_resolve_nested_zip_wrapper_returns_inner_root():
+    with tempfile.TemporaryDirectory() as tmp:
+        staged = Path(tmp)
+        dataset = staged / "lerobot_0907_test2"
+        _write_lerobot_root(dataset, version="v2.1", video_path=None)
+        assert resolve_lerobot_dataset_root(staged) == dataset.resolve()
+        assert resolve_lerobot_dataset_root(dataset) == dataset.resolve()
+
+
+def test_resolve_empty_raises():
+    with tempfile.TemporaryDirectory() as tmp:
+        try:
+            resolve_lerobot_dataset_root(Path(tmp))
+        except RobotImportError as exc:
+            assert "meta/info.json" in str(exc)
+        else:
+            raise AssertionError("empty staged root should not resolve")
+
+
+def test_resolve_multiple_lerobot_roots_raises():
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        _write_lerobot_root(root / "one")
+        _write_lerobot_root(root / "two")
+        try:
+            resolve_lerobot_dataset_root(root)
+        except RobotImportError as exc:
+            assert "多个" in str(exc)
+        else:
+            raise AssertionError("two LeRobot roots should not resolve")
 
 
 def test_yam_and_lerobot_together_is_mixed():
@@ -135,6 +171,9 @@ def _run_standalone() -> int:
         test_yam_episode_is_yam_hdf5,
         test_lerobot_without_videos_is_lerobot,
         test_lerobot_nested_zip_layout_is_lerobot,
+        test_resolve_nested_zip_wrapper_returns_inner_root,
+        test_resolve_empty_raises,
+        test_resolve_multiple_lerobot_roots_raises,
         test_yam_and_lerobot_together_is_mixed,
         test_empty_dir_is_empty,
         test_images_only_is_empty,

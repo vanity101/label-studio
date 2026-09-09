@@ -31,6 +31,7 @@ if str(LS) not in sys.path:
     sys.path.insert(0, str(LS))
 
 from robot_import import RobotImportError  # noqa: E402
+from robot_import.lerobot_detect import resolve_lerobot_dataset_root  # noqa: E402
 from robot_import.ls_import import (  # noqa: E402
     looks_like_lerobot_upload,
     route_staged_robot,
@@ -83,6 +84,7 @@ def test_import_jsx_lerobot_copy_and_extensions():
 def test_ls_import_source_routes_classify_and_decode():
     text = (LS / "robot_import" / "ls_import.py").read_text(encoding="utf-8")
     assert "classify_staged_root" in text
+    assert "resolve_lerobot_dataset_root" in text
     assert "decode_lerobot_to_tasks_isolated" in text
     assert "decode_bronze_to_tasks_isolated" in text
     assert "route_staged_robot" in text
@@ -115,6 +117,23 @@ def test_stage_then_route_lerobot_without_yam_require():
                 pairs.append((str(path.relative_to(dataset.parent)), path))
         found = stage_named_files(dest, pairs)
         assert route_staged_robot(found) == "lerobot"
+
+
+def test_stage_zip_wrapper_resolves_inner_lerobot_root():
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        dataset = _write_lerobot_root(root / "lerobot_0907_test2")
+        archive = root / "lerobot_0907_test2.zip"
+        with zipfile.ZipFile(archive, "w") as zf:
+            for path in dataset.rglob("*"):
+                if path.is_file():
+                    zf.write(path, arcname=f"{dataset.name}/{path.relative_to(dataset)}")
+        dest = root / "staged"
+        found = stage_named_files(dest, [("lerobot_0907_test2.zip", archive)])
+        assert route_staged_robot(found) == "lerobot"
+        resolved = resolve_lerobot_dataset_root(found)
+        assert resolved.name == "lerobot_0907_test2"
+        assert (resolved / "meta" / "info.json").is_file()
 
 
 def test_stage_zip_still_routes_yam():
@@ -152,6 +171,7 @@ def _run_standalone() -> int:
         test_ls_import_source_routes_classify_and_decode,
         test_name_gate_intercepts_lerobot_and_rejects_mix,
         test_stage_then_route_lerobot_without_yam_require,
+        test_stage_zip_wrapper_resolves_inner_lerobot_root,
         test_stage_zip_still_routes_yam,
         test_empty_stage_is_unrecognized,
     ]

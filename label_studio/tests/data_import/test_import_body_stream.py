@@ -7,7 +7,7 @@ from data_import.uploader import load_tasks, uploaded_files
 from django.contrib.auth import get_user_model
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.http.request import RawPostDataException
-from django.test import RequestFactory
+from django.test import RequestFactory, override_settings
 from organizations.models import Organization
 from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.request import Request
@@ -70,3 +70,23 @@ def test_load_tasks_uses_django_files_after_csrf_style_post_parse():
     assert len(tasks) == 1
     assert tasks[0]['data']['text'] == 'hello'
     assert file_upload_ids
+
+
+@override_settings(DATA_UPLOAD_MAX_MEMORY_SIZE=64)
+def test_import_api_oversized_multipart_does_not_500_body_stream(setup_project_dialog):
+    """Full middleware + ImportAPI path: payload bigger than the in-memory body cache.
+
+    940MB episode hdf5 hits the same class of failure on 7f7be424: ContextLog
+    membership/`request.body` starts the stream, then DRF re-reads body.
+    """
+    payload = json.dumps([{'data': {'text': 'hello from dcp-50 ' + ('x' * 80)}}]).encode()
+    assert len(payload) > 64
+    endpoint = f'/api/projects/{setup_project_dialog.project.id}/import?commit_to_project=false'
+    response = setup_project_dialog.post(
+        endpoint,
+        {'tasks.json': SimpleUploadedFile('tasks.json', payload, content_type='application/json')},
+    )
+    assert response.status_code == 201, response.content
+    detail = str(getattr(response, 'data', response.content))
+    assert 'data stream' not in detail
+    assert response.data.get('file_upload_ids')

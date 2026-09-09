@@ -9,7 +9,7 @@ import { HeidiTips } from "../../components/HeidiTips/HeidiTips";
 import { useAPI } from "../../providers/ApiProvider";
 import { cn } from "../../utils/bem";
 import { ConfigPage } from "./Config/Config";
-import { ROBOT_DEFAULT_TEMPLATE } from "./Config/robotDefaultTemplate";
+import { ROBOT_DEFAULT_TEMPLATE, resolveCreateProjectLabelConfig } from "./Config/robotDefaultTemplate";
 import "./CreateProject.prefix.css";
 import { ImportPage } from "./Import/Import";
 import { useImportPage } from "./Import/useImportPage";
@@ -133,7 +133,7 @@ export const CreateProject = ({ onClose }) => {
     () => ({
       title: name,
       description,
-      label_config: project?.label_config ?? "<View></View>",
+      label_config: resolveCreateProjectLabelConfig(project?.label_config),
     }),
     [name, description, project?.label_config],
   );
@@ -245,7 +245,9 @@ export const CreateProject = ({ onClose }) => {
         />
         <ConfigPage
           project={project}
+          config={resolveCreateProjectLabelConfig(project?.label_config)}
           onUpdate={(config) => {
+            if (!project) return;
             updateProject({ ...project, label_config: config });
           }}
           show={step === "config"}

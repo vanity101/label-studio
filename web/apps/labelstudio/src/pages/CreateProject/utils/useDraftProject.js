@@ -2,6 +2,7 @@ import { projectAtom } from "apps/labelstudio/src/providers/ProjectProvider";
 import { useAtom } from "jotai";
 import React, { useEffect } from "react";
 import { useAPI } from "../../../providers/ApiProvider";
+import { ROBOT_DEFAULT_TEMPLATE } from "../Config/robotDefaultTemplate";
 
 export const useDraftProject = () => {
   const api = useAPI();
@@ -26,6 +27,7 @@ export const useDraftProject = () => {
       body: {
         title: projectName,
         is_draft: true,
+        label_config: ROBOT_DEFAULT_TEMPLATE,
       },
     });
 

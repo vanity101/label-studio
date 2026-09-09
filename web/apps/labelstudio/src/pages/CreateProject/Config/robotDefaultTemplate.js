@@ -1,6 +1,7 @@
 /**
  * Create Project Labeling Interface preset (DCP-37 / FR-014, FR-015, VIS-001, DEC-UI-002).
  * Literal XML from the issue body — not overlay single-view.xml (30fps).
+ * Must persist on the project as label_config — Code editor-only is not enough.
  */
 export const ROBOT_DEFAULT_TEMPLATE = `<View>
   <Header value="机器人视频时间轴标注"/>
@@ -27,3 +28,13 @@ export const ROBOT_DEFAULT_TEMPLATE = `<View>
   </Choices>
   <TextArea name="action_sequence" toName="video" editable="true" rows="2" placeholder="例如：抓住水瓶-倒水-放在桌上"/>
 </View>`;
+
+const EMPTY_VIEW = "<View></View>";
+
+export function resolveCreateProjectLabelConfig(config) {
+  const normalized = String(config ?? "").replace(/\s+/g, "");
+  if (!normalized || normalized === EMPTY_VIEW) {
+    return ROBOT_DEFAULT_TEMPLATE;
+  }
+  return config;
+}

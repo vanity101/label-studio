@@ -1,4 +1,4 @@
-import { ROBOT_DEFAULT_TEMPLATE } from "./robotDefaultTemplate";
+import { ROBOT_DEFAULT_TEMPLATE, resolveCreateProjectLabelConfig } from "./robotDefaultTemplate";
 
 function normalizeXml(xml) {
   return xml.trim().replace(/\s+/g, " ");
@@ -56,5 +56,19 @@ describe("ROBOT_DEFAULT_TEMPLATE", () => {
 </View>`;
 
     expect(normalizeXml(ROBOT_DEFAULT_TEMPLATE)).toBe(normalizeXml(expected));
+  });
+});
+
+describe("resolveCreateProjectLabelConfig", () => {
+  it("replaces missing or empty View so Import-first Save still persists the preset", () => {
+    expect(resolveCreateProjectLabelConfig(undefined)).toBe(ROBOT_DEFAULT_TEMPLATE);
+    expect(resolveCreateProjectLabelConfig("")).toBe(ROBOT_DEFAULT_TEMPLATE);
+    expect(resolveCreateProjectLabelConfig("<View></View>")).toBe(ROBOT_DEFAULT_TEMPLATE);
+    expect(resolveCreateProjectLabelConfig("  <View></View>  ")).toBe(ROBOT_DEFAULT_TEMPLATE);
+  });
+
+  it("leaves a non-empty labeling config unchanged", () => {
+    const custom = "<View><Text name=\"t\" value=\"$text\"/></View>";
+    expect(resolveCreateProjectLabelConfig(custom)).toBe(custom);
   });
 });

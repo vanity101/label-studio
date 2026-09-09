@@ -178,17 +178,36 @@ class ContextLogMiddleware(CommonMiddleware):
         self.get_response = get_response
         self.log = ContextLog()
 
+    @staticmethod
+    def _should_skip_body_capture(request):
+        """Do not read request.body for multipart or oversized payloads.
+
+        Reading body starts Django's stream. DRF Import then re-reads
+        request.body and raises RawPostDataException on real-size uploads.
+        """
+        content_type = (getattr(request, 'content_type', None) or '').split(';')[0].strip().lower()
+        if content_type.startswith('multipart/'):
+            return True
+        try:
+            content_length = int(request.META.get('CONTENT_LENGTH') or 0)
+        except (TypeError, ValueError):
+            content_length = 0
+        max_size = getattr(settings, 'DATA_UPLOAD_MAX_MEMORY_SIZE', None)
+        return max_size is not None and content_length > max_size
+
     def __call__(self, request):
         body = None
-        try:
-            body = json.loads(request.body)
-        except:  # noqa: E722
+        if not self._should_skip_body_capture(request):
             try:
-                body = request.body.decode('utf-8')
+                body = json.loads(request.body)
             except:  # noqa: E722
-                pass
+                try:
+                    body = request.body.decode('utf-8')
+                except:  # noqa: E722
+                    pass
 
-        if 'server_id' not in request:
+        # hasattr, not `in`: HttpRequest.__iter__ reads the body stream.
+        if not hasattr(request, 'server_id'):
             setattr(request, 'server_id', self.log._get_server_id())
 
         response = self.get_response(request)
@@ -197,7 +216,7 @@ class ContextLogMiddleware(CommonMiddleware):
         return response
 
     def process_request(self, request):
-        if 'server_id' not in request:
+        if not hasattr(request, 'server_id'):
             setattr(request, 'server_id', self.log._get_server_id())
 
 

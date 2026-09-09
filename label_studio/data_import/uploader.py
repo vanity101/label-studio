@@ -69,6 +69,17 @@ def check_extensions(files):
         raise ValidationError(f'{ext} extension is not supported')
 
 
+def uploaded_files(request):
+    """Return multipart files from the Django request, not DRF Request.FILES.
+
+    DRF Request.FILES re-reads request.body when the stream was already
+    started (ContextLogMiddleware). That raises RawPostDataException on
+    real-size robot zip/hdf5 imports (DCP-50).
+    """
+    django_request = getattr(request, '_request', request)
+    return django_request.FILES
+
+
 def check_request_files_size(files):
     total = sum([file.size for _, file in files.items()])
 
@@ -351,10 +362,11 @@ def load_tasks(request, project):
     could_be_tasks_list = False
 
     # take tasks from request FILES
-    if len(request.FILES) > 0:
-        check_request_files_size(request.FILES)
-        check_extensions(request.FILES)
-        for filename, file in request.FILES.items():
+    files = uploaded_files(request)
+    if len(files) > 0:
+        check_request_files_size(files)
+        check_extensions(files)
+        for filename, file in files.items():
             file_upload = create_file_upload(request.user, project, file)
             if file_upload.format_could_be_tasks_list:
                 could_be_tasks_list = True

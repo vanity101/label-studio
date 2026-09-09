@@ -49,7 +49,7 @@ from .functions import (
 )
 from .models import FileUpload
 from .serializers import FileUploadSerializer, ImportApiSerializer, PredictionSerializer
-from .uploader import create_file_uploads, load_tasks
+from .uploader import create_file_uploads, load_tasks, uploaded_files
 
 logger = logging.getLogger(__name__)
 
@@ -378,9 +378,10 @@ class ImportAPI(generics.CreateAPIView):
             return_task_ids=return_task_ids,
         )
 
-        if len(request.FILES) > 0:
-            logger.debug(f'Import from files: {request.FILES}')
-            file_upload_ids, could_be_tasks_list = create_file_uploads(request.user, project, request.FILES)
+        files = uploaded_files(request)
+        if len(files) > 0:
+            logger.debug(f'Import from files: {files}')
+            file_upload_ids, could_be_tasks_list = create_file_uploads(request.user, project, files)
             project_import.file_upload_ids = file_upload_ids
             project_import.could_be_tasks_list = could_be_tasks_list
             project_import.save(update_fields=['file_upload_ids', 'could_be_tasks_list'])

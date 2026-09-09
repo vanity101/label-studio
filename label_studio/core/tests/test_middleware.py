@@ -1,8 +1,15 @@
 import jwt
 import pytest
-from core.middleware import NoindexUrlMiddleware, XApiKeySupportMiddleware, authorization_header_from_x_api_key
+from core.middleware import (
+    ContextLogMiddleware,
+    NoindexUrlMiddleware,
+    XApiKeySupportMiddleware,
+    authorization_header_from_x_api_key,
+)
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.http import HttpResponse
 from django.test import RequestFactory, override_settings
+from django.test.client import BOUNDARY, encode_multipart
 
 _VALID_JWT = jwt.encode({'token_type': 'access'}, 'secret', algorithm='HS256')
 
@@ -127,3 +134,53 @@ def test_x_api_key_middleware_maps_legacy_key_to_token_authorization():
 
     assert request.META['HTTP_AUTHORIZATION'] == 'Token legacy-api-key'
     assert 'HTTP_X_API_KEY' not in request.META
+
+
+def test_membership_check_on_httprequest_consumes_body_stream():
+    """Pin the Django footgun: `x in HttpRequest` reads the upload via readline()."""
+    raw = encode_multipart(BOUNDARY, {'file': SimpleUploadedFile('pack.zip', b'PK\x03\x04' + b'\x00' * 64)})
+    request = RequestFactory().generic(
+        'POST',
+        '/api/projects/1/import',
+        data=raw,
+        content_type=f'multipart/form-data; boundary={BOUNDARY}',
+    )
+    assert ('server_id' not in request) is True
+    assert request._read_started is True
+
+
+def test_contextlog_skips_multipart_body_so_import_stream_stays_unread():
+    upload = SimpleUploadedFile('pack.zip', b'PK\x03\x04' + b'\x00' * 64)
+    raw = encode_multipart(BOUNDARY, {'file': upload})
+    request = RequestFactory().generic(
+        'POST',
+        '/api/projects/1/import',
+        data=raw,
+        content_type=f'multipart/form-data; boundary={BOUNDARY}',
+    )
+    assert request.content_type.startswith('multipart/')
+    assert ContextLogMiddleware._should_skip_body_capture(request) is True
+    assert request._read_started is False
+
+    ContextLogMiddleware(lambda req: HttpResponse())(request)
+
+    assert request._read_started is False
+    assert not hasattr(request, '_body')
+
+
+@override_settings(DATA_UPLOAD_MAX_MEMORY_SIZE=16)
+def test_contextlog_skips_oversized_non_multipart_body():
+    payload = b'{"data":{"text":"hello world this is oversized"}}'
+    request = RequestFactory().generic(
+        'POST',
+        '/api/projects/1/import',
+        data=payload,
+        content_type='application/json',
+    )
+    request.META['CONTENT_LENGTH'] = str(len(payload))
+    assert ContextLogMiddleware._should_skip_body_capture(request) is True
+
+    ContextLogMiddleware(lambda req: HttpResponse())(request)
+
+    assert request._read_started is False
+    assert not hasattr(request, '_body')

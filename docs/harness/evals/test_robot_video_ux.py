@@ -1,4 +1,4 @@
-"""Eval for Zhiyuan robot-video UX. Contract: robot-video-ux.md"""
+"""Eval for Zhiyuan robot-video UX. Contract: five labels + quality axis; click-span left to S2."""
 
 from __future__ import annotations
 
@@ -51,6 +51,16 @@ def test_single_view_discard_is_on_top_bar():
     assert discard_index < video_index
     assert "异常" not in overlay._all_choice_values(root)
     assert "abnormal" not in overlay._all_choice_values(root)
+    phase_labels = [
+        el.attrib.get("value")
+        for el in overlay.findall(
+            [item for item in overlay.findall(root, "TimelineLabels") if item.attrib.get("name") == "videoLabels"][0],
+            "Label",
+        )
+    ]
+    assert "place_object" in phase_labels
+    assert "Place" not in phase_labels
+    assert "grasp" not in phase_labels
 
 
 def test_multi_view_xml_was_not_rewritten():
@@ -99,24 +109,27 @@ def test_previous_overlay_eval_still_holds():
     assert not errors, errors
 
 
-def test_second_timeline_still_rejected():
+def test_missing_quality_axis_is_rejected():
     xml = """
     <View>
-      <TimelineLabels name="a" toName="video"><Label value="Static"/></TimelineLabels>
-      <TimelineLabels name="b" toName="video"><Label value="grasp"/></TimelineLabels>
+      <TimelineLabels name="videoLabels" toName="video">
+        <Label value="Static"/>
+        <Label value="reach_object"/>
+        <Label value="grasp_object"/>
+        <Label value="place_object"/>
+        <Label value="End"/>
+      </TimelineLabels>
       <Choices name="discard" toName="video"><Choice value="废弃"/></Choices>
       <Video name="video" value="$video" frameRate="30.0"/>
-      <Choices name="granularity" toName="video"><Choice value="简单"/></Choices>
-      <TextArea name="action_sequence" toName="video"/>
     </View>
     """
     root = ET.fromstring(xml)
     try:
         overlay.check_single_view(root)
     except overlay.CheckError as exc:
-        assert "恰好 1 条 TimelineLabels" in str(exc)
+        assert "恰好 2 条 TimelineLabels" in str(exc)
     else:
-        raise AssertionError("第二套时间轴应失败")
+        raise AssertionError("缺少质量轴应失败")
 
 
 def _run_standalone() -> int:
@@ -130,7 +143,7 @@ def _run_standalone() -> int:
         test_editor_click_to_span_is_wired,
         test_dockerfile_is_official_image_plus_frontend,
         test_previous_overlay_eval_still_holds,
-        test_second_timeline_still_rejected,
+        test_missing_quality_axis_is_rejected,
     ]
     failed = []
     for test in tests:

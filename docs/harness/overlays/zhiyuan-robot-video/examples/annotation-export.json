@@ -1,65 +1,29 @@
-{
-  "result": [
-    {
-      "from_name": "videoLabels",
-      "to_name": "video",
-      "type": "timelinelabels",
-      "value": {
-        "ranges": [{"start": 1, "end": 20}],
-        "timelinelabels": ["Static"]
-      }
-    },
-    {
-      "from_name": "videoLabels",
-      "to_name": "video",
-      "type": "timelinelabels",
-      "value": {
-        "ranges": [{"start": 21, "end": 40}],
-        "timelinelabels": ["grasp"]
-      }
-    },
-    {
-      "from_name": "videoLabels",
-      "to_name": "video",
-      "type": "timelinelabels",
-      "value": {
-        "ranges": [{"start": 41, "end": 70}],
-        "timelinelabels": ["Place"]
-      }
-    },
-    {
-      "from_name": "videoLabels",
-      "to_name": "video",
-      "type": "timelinelabels",
-      "value": {
-        "ranges": [{"start": 71, "end": 90}],
-        "timelinelabels": ["End"]
-      }
-    },
-    {
-      "from_name": "videoLabels",
-      "to_name": "video",
-      "type": "timelinelabels",
-      "value": {
-        "ranges": [{"start": 91, "end": 120}],
-        "timelinelabels": ["Static"]
-      }
-    },
-    {
-      "from_name": "granularity",
-      "to_name": "video",
-      "type": "choices",
-      "value": {
-        "choices": ["简单"]
-      }
-    },
-    {
-      "from_name": "action_sequence",
-      "to_name": "video",
-      "type": "textarea",
-      "value": {
-        "text": ["抓住水瓶-倒水-放在桌上"]
-      }
+[
+  {
+    "episode_id": "episode_000000",
+    "subtasks": [
+      {"name": "Static", "start_frame": 0, "end_frame": 2},
+      {"name": "reach_object", "start_frame": 3, "end_frame": 5},
+      {"name": "grasp_object", "start_frame": 6, "end_frame": 8},
+      {"name": "place_object", "start_frame": 9, "end_frame": 11},
+      {"name": "End", "start_frame": 12, "end_frame": 14}
+    ],
+    "frame_attributes": {
+      "0":  {"action_quality": 1},
+      "1":  {"action_quality": 1},
+      "2":  {"action_quality": 1},
+      "3":  {"action_quality": 1},
+      "4":  {"action_quality": 1},
+      "5":  {"action_quality": 0},
+      "6":  {"action_quality": 0},
+      "7":  {"action_quality": 1},
+      "8":  {"action_quality": 1},
+      "9":  {"action_quality": 1},
+      "10": {"action_quality": 1},
+      "11": {"action_quality": 1},
+      "12": {"action_quality": 1},
+      "13": {"action_quality": 1},
+      "14": {"action_quality": 1}
     }
-  ]
-}
+  }
+]

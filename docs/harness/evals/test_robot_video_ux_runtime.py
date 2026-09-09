@@ -107,7 +107,7 @@ def test_live_app_js_is_vite_with_click_to_span():
 
 
 def test_live_browser_click_place_creates_span():
-    """Must open Chromium, log in, and click Place. curl / JS grep is not this test."""
+    """Must open Chromium, log in, and click place_object. curl / JS grep is not this test."""
     verify_click_place()
 
 

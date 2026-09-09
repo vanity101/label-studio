@@ -37,14 +37,14 @@ CLICK_PLACE_JS = """
   if (typeof video.setOnlyFrame === "function") video.setOnlyFrame(30);
   else if (typeof video.setFrame === "function") video.setFrame(30);
   const labels = names.get && names.get("videoLabels");
-  const place = labels && (labels.children || []).find((c) => c.value === "Place");
+  const place = labels && (labels.children || []).find((c) => c.value === "place_object");
   if (labels && place && typeof labels.handleLabelClick === "function") {
     labels.handleLabelClick(place);
   } else {
     const el = [...document.querySelectorAll("button, span, div")].find(
-      (node) => node.textContent && node.textContent.trim() === "Place" && node.offsetParent
+      (node) => node.textContent && node.textContent.trim() === "place_object" && node.offsetParent
     );
-    if (!el) return { ok: false, error: "Place control not found" };
+    if (!el) return { ok: false, error: "place_object control not found" };
     el.click();
   }
   const regions = (selected.regionStore && selected.regionStore.regions) || [];
@@ -169,7 +169,7 @@ def seed_single_view_task(page) -> tuple[int, int]:
         if not pid:
             continue
         config_xml = project.get("label_config") or ""
-        if 'value="Place"' not in config_xml:
+        if 'value="place_object"' not in config_xml:
             continue
         tasks = _api(page, "GET", f"/api/tasks/?project={pid}")
         task_list = tasks if isinstance(tasks, list) else tasks.get("tasks") or tasks.get("results") or []
@@ -181,7 +181,7 @@ def seed_single_view_task(page) -> tuple[int, int]:
         page,
         "POST",
         "/api/projects/",
-        {"title": "runtime-eval-click-place", "label_config": config},
+        {"title": "runtime-eval-click-place-object", "label_config": config},
     )
     pid = created.get("id")
     if not pid:
@@ -219,16 +219,16 @@ def verify_click_place() -> dict:
                     timeout=60000,
                 )
                 result = page.evaluate(CLICK_PLACE_JS)
-                assert result and result.get("ok"), f"点 Place 脚本失败: {result!r}"
+                assert result and result.get("ok"), f"点 place_object 脚本失败: {result!r}"
                 regions = [r for r in result.get("regions") or [] if r.get("type") == "timelineregion"]
-                assert regions, f"点 Place 后没有 timelineregion: {result!r}"
+                assert regions, f"点 place_object 后没有 timelineregion: {result!r}"
                 span = regions[-1]
                 start, end = span.get("start"), span.get("end")
                 frame = result.get("frame")
                 assert start == 1, f"期望 start=1，实际 {start}（{result!r}）"
                 assert end == frame, f"期望 end=播放头 {frame}，实际 {end}（{result!r}）"
                 assert end != start, f"仍是官方单帧 start=end={start}"
-                assert result.get("placeSelected") is False, f"Place 仍保持选中: {result!r}"
+                assert result.get("placeSelected") is False, f"place_object 仍保持选中: {result!r}"
                 return result
             finally:
                 browser.close()
@@ -245,11 +245,13 @@ PRESET_MARKERS = (
     "机器人视频时间轴标注",
     'frameRate="10.0"',
     'value="Static"',
-    'value="grasp"',
-    'value="Place"',
+    'value="reach_object"',
+    'value="grasp_object"',
+    'value="place_object"',
     'value="End"',
     "废弃",
-    "action_sequence",
+    'value="质量=0"',
+    'name="actionQuality"',
 )
 SETTINGS_PROBE = """<View>
   <Text name="text" value="$text"/>

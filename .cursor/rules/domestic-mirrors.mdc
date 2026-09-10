@@ -1,0 +1,30 @@
+---
+description: 装依赖、拉代码、下载资源时必须先写国内镜像完整命令，禁止先跑官方源
+alwaysApply: true
+---
+
+# 国内镜像（先镜像，失败才官方源）
+
+每一条会出网的安装/克隆/下载命令必须自带镜像参数。禁止先跑官方源再补救。禁止从 README / Dockerfile / 上游文档原样复制官方 URL。
+
+```bash
+# pip / uv（清华）。uv 必须带 --no-sources，否则 pyproject 里的 GitHub 源仍会打 github.com
+pip install PKG -i https://pypi.tuna.tsinghua.edu.cn/simple --trusted-host pypi.tuna.tsinghua.edu.cn
+uv pip install --python .venv/bin/python --no-config --no-sources -i https://pypi.tuna.tsinghua.edu.cn/simple PKG
+
+# npm / bun（淘宝）
+npm install --registry=https://registry.npmmirror.com
+bun install --registry https://registry.npmmirror.com
+
+# git clone / GitHub 压缩包（ghproxy）
+git clone https://ghproxy.com/https://github.com/ORG/REPO.git
+curl -L -o src.tgz https://ghproxy.com/https://github.com/ORG/REPO/archive/REF.tar.gz
+
+# Playwright 浏览器二进制（npmmirror）
+PLAYWRIGHT_DOWNLOAD_HOST=https://npmmirror.com/mirrors/playwright python -m playwright install chromium
+
+# 容器内 Alpine apk
+sed -i 's#https\?://dl-cdn.alpinelinux.org#https://mirrors.tuna.tsinghua.edu.cn#g' /etc/apk/repositories
+```
+
+镜像失败后再切官方源，并在回复里写明失败原因。`docker pull` 官方基础镜像除外。

@@ -22,6 +22,7 @@ export const Inner = () => {
   const api = useAPI();
 
   const { uploading, uploadDisabled, finishUpload, fileIds, pageProps, uploadSample } = useImportPage(project);
+  const openFilePickerRef = useRef(null);
 
   const backToDM = useCallback(() => {
     const path = location.pathname.replace(ImportModal.path, "");
@@ -47,6 +48,11 @@ export const Inner = () => {
   }, [modal, project, fileIds, backToDM]);
 
   const onFinish = useCallback(async () => {
+    if ((!fileIds || fileIds.length === 0) && !sample) {
+      openFilePickerRef.current?.();
+      return;
+    }
+
     if (sample) {
       await uploadSample(
         sample,
@@ -59,7 +65,7 @@ export const Inner = () => {
 
     if (!imported) return;
     backToDM();
-  }, [backToDM, finishUpload, sample]);
+  }, [backToDM, finishUpload, sample, fileIds]);
 
   return (
     <Modal
@@ -99,6 +105,9 @@ export const Inner = () => {
       <ImportPage
         project={project}
         sample={sample}
+        registerOpenFilePicker={(fn) => {
+          openFilePickerRef.current = fn;
+        }}
         onSampleDatasetSelect={setSample}
         projectConfigured={Object.keys(project.parsed_label_config ?? {}).length > 0}
         openLabelingConfig={() => {

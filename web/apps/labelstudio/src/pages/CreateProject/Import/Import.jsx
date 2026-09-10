@@ -27,7 +27,7 @@ function flatten(nested) {
   return [].concat(...nested);
 }
 
-// Keep in sync with core.settings.SUPPORTED_EXTENSIONS on the BE.
+// Keep in sync with core.settings.SUPPORTED_EXTENSIONS + robot_import.detect on the BE.
 const supportedExtensions = {
   text: ["txt"],
   audio: ["wav", "mp3", "flac", "m4a", "ogg"],
@@ -36,6 +36,7 @@ const supportedExtensions = {
   html: ["html", "htm", "xml"],
   pdf: ["pdf"],
   structuredData: ["csv", "tsv", "json"],
+  robot: ["zip", "hdf5", "h5", "yaml", "yml"],
 };
 const allSupportedExtensions = flatten(Object.values(supportedExtensions));
 
@@ -44,6 +45,17 @@ function getFileExtension(fileName) {
     return fileName;
   }
   return fileName.split(".").pop().toLowerCase();
+}
+
+function isSupportedImportFile(fileName) {
+  if (!fileName) {
+    return false;
+  }
+  const lower = fileName.toLowerCase();
+  if (lower === "complete" || lower.endsWith("/complete")) {
+    return true;
+  }
+  return allSupportedExtensions.includes(getFileExtension(fileName));
 }
 
 function traverseFileTree(item, path) {
@@ -152,6 +164,7 @@ export const ImportPage = ({
   setCsvHandling,
   addColumns,
   openLabelingConfig,
+  registerOpenFilePicker,
 }) => {
   const [error, setError] = useState();
   const [newlyUploadedFiles, setNewlyUploadedFiles] = useState(new Set());
@@ -301,7 +314,7 @@ export const ImportPage = ({
       const fd = new FormData();
 
       for (const f of files) {
-        if (!allSupportedExtensions.includes(getFileExtension(f.name))) {
+        if (!isSupportedImportFile(f.name)) {
           onError(new Error(`The filetype of file "${f.name}" is not supported.`));
           return;
         }
@@ -360,6 +373,18 @@ export const ImportPage = ({
   }, [project?.id, loadFilesList]);
 
   const urlRef = useRef();
+  const fileInputRef = useRef(null);
+  const openFilePicker = useCallback(() => {
+    const input = fileInputRef.current;
+    if (!input) return;
+    input.value = "";
+    input.click();
+  }, []);
+
+  useEffect(() => {
+    registerOpenFilePicker?.(openFilePicker);
+    return () => registerOpenFilePicker?.(null);
+  }, [openFilePicker, registerOpenFilePicker]);
 
   if (!project) return null;
   if (!show) return null;
@@ -373,7 +398,17 @@ export const ImportPage = ({
   return (
     <div className={importClass}>
       {highlightCsvHandling && <div className={importClass.elem("csv-splash").toClassName()} />}
-      <input id="file-input" type="file" name="file" multiple onChange={onUpload} style={{ display: "none" }} />
+      <input
+        id="file-input"
+        ref={fileInputRef}
+        type="file"
+        name="file"
+        multiple
+        onChange={onUpload}
+        className="fixed left-[-9999px] top-0 h-px w-px overflow-hidden opacity-0"
+        tabIndex={-1}
+        aria-hidden="true"
+      />
 
       <header className="flex gap-4">
         <form
@@ -391,7 +426,7 @@ export const ImportPage = ({
           variant="primary"
           look="outlined"
           type="button"
-          onClick={() => document.getElementById("file-input").click()}
+          onClick={openFilePicker}
           leading={<IconUpload />}
           aria-label="Upload file"
         >
@@ -469,10 +504,18 @@ export const ImportPage = ({
                       <dd>{supportedExtensions.structuredData.join(", ")}</dd>
                       <dt>PDF</dt>
                       <dd>{supportedExtensions.pdf.join(", ")}</dd>
+                      <dt>Robot HDF5</dt>
+                      <dd>{supportedExtensions.robot.join(", ")}</dd>
                     </dl>
                     <div className="tips">
                       <b>Important:</b>
                       <ul className="mt-2 ml-4 list-disc font-normal">
+                        <li>
+                          For robot videos, upload a YAM episode folder, a zip of episode_*
+                          directories, or a minimal package (info.yaml + high_cam.hdf5). Preview
+                          uses high_cam RGB at 30 fps. LeRobot will be added later. Do not mix with
+                          mp4 or json.
+                        </li>
                         <li>
                           We recommend{" "}
                           <a

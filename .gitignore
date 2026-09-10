@@ -85,3 +85,8 @@ CLAUDE.local.md
 web/libs/editor/tests/coverage
 web/coverage-chunks
 .cache
+
+# Multica worktree replay skips leftover untracked files (200 MiB / no symlinks).
+# Keep large local eval fixtures in the user tree only.
+docs/harness/evals/fixtures/yam-highcam-demo.zip
+docs/harness/evals/fixtures/yam-highcam-demo/

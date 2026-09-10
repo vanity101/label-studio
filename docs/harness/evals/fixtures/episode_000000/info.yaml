@@ -1,0 +1,4 @@
+data_schema_version: 3
+storage:
+  camera_files:
+    high_cam: high_cam.hdf5

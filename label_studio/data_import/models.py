@@ -328,7 +328,17 @@ class FileUpload(models.Model):
         file_uploads = FileUpload.objects.filter(project=project)
         if file_upload_ids:
             file_uploads = file_uploads.filter(id__in=file_upload_ids)
-        for file_upload in file_uploads:
+        upload_list = list(file_uploads)
+        from robot_import.ls_import import try_load_robot_tasks
+
+        robot_loaded = try_load_robot_tasks(project, upload_list)
+        if robot_loaded is not None:
+            robot_tasks, robot_formats, robot_fields = robot_loaded
+            if trim_size is not None:
+                robot_tasks = robot_tasks[:trim_size]
+            return robot_tasks, robot_formats, robot_fields
+
+        for file_upload in upload_list:
             file_format = file_upload.format
             if formats and file_format not in formats:
                 continue
@@ -372,7 +382,19 @@ class FileUpload(models.Model):
         if file_upload_ids:
             file_uploads = file_uploads.filter(id__in=file_upload_ids)
 
-        for file_upload in file_uploads:
+        upload_list = list(file_uploads)
+        from robot_import.ls_import import try_load_robot_tasks
+
+        robot_loaded = try_load_robot_tasks(project, upload_list)
+        if robot_loaded is not None:
+            robot_tasks, robot_formats, robot_fields = robot_loaded
+            for i in range(0, len(robot_tasks), batch_size):
+                yield robot_tasks[i : i + batch_size], robot_formats, robot_fields
+            if not robot_tasks:
+                yield [], robot_formats, robot_fields
+            return
+
+        for file_upload in upload_list:
             file_format = file_upload.format
             if formats and file_format not in formats:
                 continue

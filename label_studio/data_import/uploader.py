@@ -57,10 +57,14 @@ def check_tasks_max_file_size(value):
 
 
 def check_extensions(files):
+    from robot_import.detect import is_supported_upload_name
+
     for filename, file_obj in files.items():
-        _, ext = os.path.splitext(file_obj.name)
-        if ext.lower() not in settings.SUPPORTED_EXTENSIONS:
-            raise ValidationError(f'{ext} extension is not supported')
+        name = getattr(file_obj, 'name', filename) or filename
+        if is_supported_upload_name(name, settings.SUPPORTED_EXTENSIONS):
+            continue
+        _, ext = os.path.splitext(name)
+        raise ValidationError(f'{ext} extension is not supported')
 
 
 def check_request_files_size(files):
